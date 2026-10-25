@@ -1,0 +1,167 @@
+name: Release
+run-name: "Release ${{ github.ref_name }}"
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write   # create the GitHub release
+  packages: write   # push to GHCR
+
+env:
+  REGISTRY: ghcr.io/otfabric
+  # Nothing is pulled from Docker Hub: anonymous pulls are rate limited per
+  # runner address and its token service times out under load. Base images
+  # (pinned by digest) and build tooling come from Google's mirror of it, and
+  # every registry operation is retried on transient failures (scripts/retry.sh).
+  BASE_REGISTRY: mirror.gcr.io/library
+  TOOLS_REGISTRY: mirror.gcr.io
+  VERSION: ${{ github.ref_name }}
+
+jobs:
+  # One job per architecture on a runner of that architecture: every image is
+  # built natively and self-tested, and exactly those images are pushed, as
+  # <image>:<version>-<arch>.
+  build:
+    name: Build, test, push (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install jsonschema
+
+      - name: Validate
+        run: |
+          scripts/check-versions.sh
+          python3 scripts/validate-fixtures.py --require-schema
+          want="interop_version: \"${VERSION#v}\""
+          grep -qF "$want" versions.yaml || { echo "::error::versions.yaml does not say $want"; exit 1; }
+
+      - name: Build for linux/${{ matrix.arch }} and self-test
+        run: |
+          make -j4 --output-sync=target images
+          make smoke
+          make selftest
+
+      - name: Upload documents
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-selftest-${{ matrix.arch }}
+          path: reports/
+          if-no-files-found: ignore
+
+      - name: Login to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "${GHCR_TOKEN}" > "${RUNNER_TEMP}/ghcr-token"
+          scripts/retry.sh scripts/ghcr-login.sh "${{ github.actor }}" "${RUNNER_TEMP}/ghcr-token"
+          rm -f "${RUNNER_TEMP}/ghcr-token"
+
+      - name: Push the tested images as ${{ github.ref_name }}-${{ matrix.arch }}
+        run: make publish-arch ARCH=${{ matrix.arch }}
+
+  # Joins the per-architecture images into the multi-arch tag and publishes
+  # the release. Nothing is built here.
+  release:
+    name: Multi-arch manifest and release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    needs: build
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Login to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "${GHCR_TOKEN}" > "${RUNNER_TEMP}/ghcr-token"
+          scripts/retry.sh scripts/ghcr-login.sh "${{ github.actor }}" "${RUNNER_TEMP}/ghcr-token"
+          rm -f "${RUNNER_TEMP}/ghcr-token"
+
+      - name: Create ${{ github.ref_name }} from the amd64 and arm64 images
+        run: make publish-manifest
+
+      - name: Digests of the multi-arch images
+        id: digests
+        run: |
+          make -s digests | tee digests.txt
+          while read -r adapter digest; do
+            [[ "${digest}" == sha256:* ]] || { echo "::error::no digest for ${adapter}"; exit 1; }
+            echo "${adapter}=${digest}" >> "$GITHUB_OUTPUT"
+          done < digests.txt
+
+      - name: Write manifest.json
+        run: |
+          arg() { sed -nE "s/^ARG $2=(.*)$/\1/p" "$1" | head -1; }
+          up() { jq -n --arg v "$(arg "adapters/$1/Dockerfile" UPSTREAM_VERSION)" --arg r "$(arg "adapters/$1/Dockerfile" UPSTREAM_SHA)" '{version: $v, revision: $r}'; }
+          jq -n \
+            --arg version "${VERSION}" \
+            --arg commit "${GITHUB_SHA}" \
+            --arg contract "$(sed -nE 's/^contract_version: "([^"]+)".*/\1/p' versions.yaml)" \
+            --arg fixture "$(sed -nE 's/^fixture_schema: "([^"]+)".*/\1/p' versions.yaml)" \
+            --argjson opener "$(up opener)" --argjson eipscanner "$(up eipscanner)" \
+            --argjson cpppo "$(up cpppo)" --argjson pycomm3 "$(up pycomm3)" \
+            --arg opener_digest "${{ steps.digests.outputs.opener }}" \
+            --arg eipscanner_digest "${{ steps.digests.outputs.eipscanner }}" \
+            --arg cpppo_digest "${{ steps.digests.outputs.cpppo }}" \
+            --arg pycomm3_digest "${{ steps.digests.outputs.pycomm3 }}" \
+            '{
+              version: $version,
+              commit: $commit,
+              contract: $contract,
+              fixtureSchema: $fixture,
+              platforms: ["linux/amd64", "linux/arm64"],
+              upstream: { OpENer: $opener, EIPScanner: $eipscanner, cpppo: $cpppo, pycomm3: $pycomm3 },
+              images: {
+                opener: ("ghcr.io/otfabric/ethernetip-interop-opener@" + $opener_digest),
+                eipscanner: ("ghcr.io/otfabric/ethernetip-interop-eipscanner@" + $eipscanner_digest),
+                cpppo: ("ghcr.io/otfabric/ethernetip-interop-cpppo@" + $cpppo_digest),
+                pycomm3: ("ghcr.io/otfabric/ethernetip-interop-pycomm3@" + $pycomm3_digest)
+              }
+            }' > manifest.json
+          cat manifest.json
+          sha256sum manifest.json > checksums.txt
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          body: |
+            ## Images
+
+            | Image | Digest |
+            |-------|--------|
+            | `ghcr.io/otfabric/ethernetip-interop-opener:${{ github.ref_name }}` | `${{ steps.digests.outputs.opener }}` |
+            | `ghcr.io/otfabric/ethernetip-interop-eipscanner:${{ github.ref_name }}` | `${{ steps.digests.outputs.eipscanner }}` |
+            | `ghcr.io/otfabric/ethernetip-interop-cpppo:${{ github.ref_name }}` | `${{ steps.digests.outputs.cpppo }}` |
+            | `ghcr.io/otfabric/ethernetip-interop-pycomm3:${{ github.ref_name }}` | `${{ steps.digests.outputs.pycomm3 }}` |
+
+            linux/amd64 and linux/arm64, each built and self-tested natively before it was pushed.
+
+            ## Pinning in a consumer
+
+            ```bash
+            ETHERNETIP_INTEROP_OPENER_IMAGE=ghcr.io/otfabric/ethernetip-interop-opener@${{ steps.digests.outputs.opener }}
+            ETHERNETIP_INTEROP_EIPSCANNER_IMAGE=ghcr.io/otfabric/ethernetip-interop-eipscanner@${{ steps.digests.outputs.eipscanner }}
+            ETHERNETIP_INTEROP_CPPPO_IMAGE=ghcr.io/otfabric/ethernetip-interop-cpppo@${{ steps.digests.outputs.cpppo }}
+            ETHERNETIP_INTEROP_PYCOMM3_IMAGE=ghcr.io/otfabric/ethernetip-interop-pycomm3@${{ steps.digests.outputs.pycomm3 }}
+            ```
+
+            `manifest.json` records the upstream revisions these images were built from. The images are for interoperability testing only. The opener image contains OpENer under its adapted BSD licence (products implementing EtherNet/IP also need ODVA's Terms of Usage); the cpppo image is GPL-3.0 as a whole; the eipscanner and pycomm3 images are MIT. See `THIRD_PARTY_NOTICES.md`. Notes: `RELEASE.md`.
+          files: |
+            manifest.json
+            checksums.txt

@@ -1,0 +1,13 @@
+# Self-test documents and summaries (make smoke, make selftest)
+reports/
+
+# Local build artifacts
+adapters/eipscanner/build/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+
+# Python
+__pycache__/

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1.0",
+  "name": "opener-sample",
+  "description": "What OpENer's POSIX sample application serves, as built by the opener adapter: its identity and assemblies. Not configurable.",
+  "identity": {
+    "vendorId": 1,
+    "deviceType": 12,
+    "productCode": 65001,
+    "revision": "2.3",
+    "serialNumber": 123456789,
+    "productName": "OpENer PC"
+  },
+  "assemblies": [
+    {"instance": 100, "kind": "input", "size": 32},
+    {"instance": 150, "kind": "output", "size": 32},
+    {"instance": 151, "kind": "config", "size": 10},
+    {"instance": 152, "kind": "input-only", "size": 0},
+    {"instance": 153, "kind": "listen-only", "size": 0},
+    {"instance": 154, "kind": "explicit", "size": 32}
+  ],
+  "echoOutputToInput": true,
+  "slot": 0,
+  "tags": []
+}

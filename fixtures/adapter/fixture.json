@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0",
+  "name": "adapter",
+  "description": "The adapter an implementation under test serves to the reference originators: OpENer's sample application layout with the OT Fabric identity.",
+  "identity": {
+    "vendorId": 65535,
+    "deviceType": 12,
+    "productCode": 42,
+    "revision": "3.7",
+    "serialNumber": 305419896,
+    "productName": "OT Fabric interop adapter"
+  },
+  "assemblies": [
+    {"instance": 100, "kind": "input", "size": 32},
+    {"instance": 150, "kind": "output", "size": 32},
+    {"instance": 151, "kind": "config", "size": 10},
+    {"instance": 152, "kind": "input-only", "size": 0},
+    {"instance": 153, "kind": "listen-only", "size": 0}
+  ],
+  "echoOutputToInput": true,
+  "slot": 0,
+  "tags": []
+}

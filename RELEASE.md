@@ -1,0 +1,49 @@
+# ethernetip-interop Releases
+
+## How a release is made
+
+1. `make ci` on the commit to release.
+2. Update `interop_version` in `versions.yaml` and the notes below.
+3. Tag `vX.Y.Z` and push the tag. The release workflow runs one job on an amd64 runner and one on an arm64 runner: each validates, builds every image natively with `ADAPTER_VERSION` set to the tag, runs the smoke test and the cross-stack self-test on those images and pushes exactly those images to GHCR as `<image>:vX.Y.Z-amd64` and `-arm64`. A last job joins the two into the multi-arch `<image>:vX.Y.Z` and creates the GitHub release with the image digests in its notes, `manifest.json` (upstream pins and the digests of the multi-arch images) and `checksums.txt`.
+4. Consumers pin the digests.
+
+Tags are immutable. A fix is a new version.
+
+| What changed | Version |
+|--------------|---------|
+| Contract or fixture format changed incompatibly | major |
+| New operation, behaviour, fixture, adapter or document field | minor |
+| Upstream pin, base image or bug fix with unchanged contract | patch |
+
+---
+
+## v0.1.0
+
+**Date:** not yet tagged
+**Previous release:** none
+
+## Summary
+
+First release: four EtherNet/IP reference stacks behind container contract
+1.0, three fixtures, and a cross-stack self-test, on linux/amd64 and
+linux/arm64.
+
+## Images
+
+| Image | Upstream | Roles |
+|-------|----------|-------|
+| `ghcr.io/otfabric/ethernetip-interop-opener` | OpENer master `d8820ef41ce30dda06d213438ba81c81de33ffe2` (v2.3-588) | server (target, with Class 1 I/O) |
+| `ghcr.io/otfabric/ethernetip-interop-eipscanner` | EIPScanner master `12c89a57ec2e7449efb1348be52af10be9ef9701` (1.3.0-33) | client (scanner, with Class 1 I/O) |
+| `ghcr.io/otfabric/ethernetip-interop-cpppo` | cpppo 5.2.5 (greenery 2.1) | server (Logix-style simulator) and client; GPL-3.0 |
+| `ghcr.io/otfabric/ethernetip-interop-pycomm3` | pycomm3 1.2.16 | client (CIP and Logix) |
+
+Base images: Debian trixie-slim and Python 3.14.8 slim-trixie, by digest
+([versions.yaml](versions.yaml)).
+
+## Contents
+
+- **Container contract 1.0** ([docs/CONTAINER_CONTRACT.md](docs/CONTAINER_CONTRACT.md)): `server`, `client` with thirteen operations (`list-identity`, `discover`, `list-services`, `get-attribute`, `set-attribute`, `get-attributes-all`, `multiple-get`, `identity`, `io`, `read-tag`, `read-tags`, `write-tag`, `tag-list`), `print-capabilities`, `print-fixture`, `version`; the networking rule for Class 1 I/O (originator and target on one Docker network, no NAT).
+- **Fixtures** ([docs/FIXTURES.md](docs/FIXTURES.md)): `opener-sample`, `adapter`, `logix`, with a JSON Schema and cross-field validation.
+- **Schemas** of the capability and client result documents (`schemas/`).
+- **Self-tests**: `make smoke` (the contract of each image) and `make selftest` (every client against every server for what both declare), with every document checked against the schemas. Results in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
+- **Adapters**: the cpppo server now loads the fixture's identity into cpppo (it ran with cpppo's default identity before), stops cleanly on SIGTERM, and refuses fixtures cpppo cannot serve (an output-to-input echo; vendor id, device type or product code above 32767); cpppo's client gained `list-services`. EIPScanner's adapter rejects unknown flags, `--connected`, `--multicast` and `--transport tcp` as usage errors. pycomm3's `list-identity --transport udp` uses `discover()`, and `--timeout-ms` sets its socket timeout. All four: a capability document with upstream, version and features per role; `upstreamVersion` in `version`; `print-fixture` refuses names with path separators.

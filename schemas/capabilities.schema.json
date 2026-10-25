@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/otfabric/ethernetip-interop/schemas/capabilities.schema.json",
+  "title": "ethernetip-interop capability document",
+  "description": "The single line 'print-capabilities' prints. See docs/CAPABILITIES.md.",
+  "type": "object",
+  "required": ["schemaVersion", "adapter", "adapterVersion", "protocol", "upstream", "roles", "fixtures",
+               "clientOperations", "clientFeatures", "serverFeatures"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "adapter": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "adapterVersion": { "type": "string", "minLength": 1 },
+    "protocol": { "const": "ethernetip" },
+    "upstream": {
+      "type": "object",
+      "required": ["name", "version", "revision", "license", "language", "independentEngine"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "license": { "type": "string", "minLength": 1 },
+        "language": { "type": "string", "minLength": 1 },
+        "independentEngine": { "type": "boolean" }
+      }
+    },
+    "roles": {
+      "type": "object",
+      "required": ["server", "client"],
+      "additionalProperties": false,
+      "properties": {
+        "server": { "type": "boolean" },
+        "client": { "type": "boolean" }
+      }
+    },
+    "fixtures": {
+      "description": "The fixtures the server serves; empty without the server role.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }
+    },
+    "clientOperations": {
+      "description": "The client operations the image runs; any other is a usage error. Empty without the client role.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["list-identity", "discover", "list-services", "get-attribute", "set-attribute",
+                         "get-attributes-all", "multiple-get", "identity", "io", "read-tag", "read-tags",
+                         "write-tag", "tag-list"] }
+    },
+    "clientFeatures": { "$ref": "#/$defs/features" },
+    "serverFeatures": { "$ref": "#/$defs/features" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "roles": { "properties": { "client": { "const": false } } } } },
+      "then": { "properties": { "clientOperations": { "maxItems": 0 }, "clientFeatures": { "maxProperties": 0 } } },
+      "else": { "properties": { "clientOperations": { "minItems": 1 } } }
+    },
+    {
+      "if": { "properties": { "roles": { "properties": { "server": { "const": false } } } } },
+      "then": { "properties": { "fixtures": { "maxItems": 0 }, "serverFeatures": { "maxProperties": 0 } } },
+      "else": { "properties": { "fixtures": { "minItems": 1 } } }
+    }
+  ],
+  "$defs": {
+    "features": {
+      "description": "What the stack does in one role. A feature that is absent is false.",
+      "type": "object",
+      "propertyNames": {
+        "enum": ["listIdentityTcp", "listIdentityUdp", "listServices", "listInterfaces", "getAttributeSingle",
+                 "setAttributeSingle", "getAttributesAll", "getAttributeList", "multipleService", "unconnectedSend",
+                 "class3", "class1", "largeForwardOpen", "multicast", "inputOnly", "listenOnly", "logixTags",
+                 "readTagFragmented", "writeTagFragmented", "readModifyWrite", "tagList", "templates",
+                 "tcpipObject", "ethernetLinkObject", "errorsCloseSession"]
+      },
+      "additionalProperties": { "type": "boolean" }
+    }
+  }
+}
