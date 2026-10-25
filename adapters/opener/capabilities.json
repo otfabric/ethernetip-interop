@@ -1,10 +1,20 @@
 {
   "schemaVersion": "1.0",
   "adapter": "opener",
-  "upstream": "OpENer",
+  "adapterVersion": "@ADAPTER_VERSION@",
+  "protocol": "ethernetip",
+  "upstream": {
+    "name": "OpENer",
+    "version": "2.3-588",
+    "revision": "d8820ef41ce30dda06d213438ba81c81de33ffe2",
+    "license": "LicenseRef-OpENer (adapted BSD; ODVA Terms of Usage for products)",
+    "language": "C",
+    "independentEngine": true
+  },
   "roles": {"server": true, "client": false},
   "fixtures": ["opener-sample"],
   "clientOperations": [],
+  "clientFeatures": {},
   "serverFeatures": {
     "listIdentityTcp": true,
     "listIdentityUdp": true,
@@ -23,7 +33,13 @@
     "inputOnly": true,
     "listenOnly": true,
     "logixTags": false,
+    "readTagFragmented": false,
+    "writeTagFragmented": false,
+    "readModifyWrite": false,
+    "tagList": false,
+    "templates": false,
     "tcpipObject": true,
-    "ethernetLinkObject": true
+    "ethernetLinkObject": true,
+    "errorsCloseSession": false
   }
 }

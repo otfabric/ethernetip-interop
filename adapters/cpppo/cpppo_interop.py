@@ -26,10 +26,12 @@ from cpppo.server.enip.get_attribute import proxy, proxy_simple
 
 ADAPTER = "cpppo"
 OPERATIONS = [
-    "list-identity", "get-attribute", "set-attribute", "get-attributes-all",
+    "list-identity", "list-services", "get-attribute", "set-attribute", "get-attributes-all",
     "multiple-get", "read-tag", "write-tag", "read-tags",
 ]
 READY_FILE = "/run/ethernetip-interop/ready"
+# The CIP types cpppo's simulator serves, of those the fixture format has.
+TAG_TYPES = {"BOOL", "SINT", "INT", "DINT", "LINT", "USINT", "UINT", "UDINT", "ULINT", "REAL", "LREAL"}
 
 
 def emit(doc, code=0):
@@ -80,16 +82,43 @@ def config_file(fx, ip):
          i["serialNumber"], i["productName"], ip)
 
 
+def fixture_problem(fx):
+    """Why cpppo cannot serve the fixture, or None."""
+    if fx.get("schemaVersion") != "1.0":
+        return "schemaVersion must be 1.0"
+    for k in ("vendorId", "deviceType", "productCode", "revision", "serialNumber", "productName"):
+        if k not in fx["identity"]:
+            return "identity.%s is missing" % k
+    for k in ("vendorId", "deviceType", "productCode"):
+        if fx["identity"][k] > 32767:
+            # cpppo 5.2.5 packs these UINTs of the ListIdentity reply as signed
+            # 16-bit integers and fails to answer with a larger value.
+            return "identity.%s %d: cpppo answers ListIdentity only for values up to 32767" % (k, fx["identity"][k])
+    if fx.get("echoOutputToInput"):
+        # cpppo's assemblies are plain attributes: nothing copies one to another.
+        return "echoOutputToInput: cpppo does not copy an output assembly to an input assembly"
+    for t in fx.get("tags", []):
+        if t.get("type") not in TAG_TYPES:
+            return "tag %s: type %s" % (t.get("name"), t.get("type"))
+    return None
+
+
 def serve(argv):
-    p = argparse.ArgumentParser(prog="ethernetip-interop server")
+    p = argparse.ArgumentParser(prog="ethernetip-interop server", allow_abbrev=False)
     p.add_argument("--fixture", default="/fixtures/logix/fixture.json")
     p.add_argument("--port", type=int, default=44818)
     p.add_argument("--ready-file", default=READY_FILE)
-    args = p.parse_args(argv)
+    try:
+        args = p.parse_args(argv)
+    except SystemExit:
+        return 2
     try:
         fx = load_fixture(args.fixture)
-    except (OSError, ValueError) as e:
-        print("fixture: %s" % e, file=sys.stderr)
+        problem = fixture_problem(fx)
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as e:
+        problem = "%s: %s" % (type(e).__name__, e)
+    if problem:
+        print("fixture %s: %s" % (args.fixture, problem), file=sys.stderr)
         return 4
     ip = own_ip()
     cfg = tempfile.NamedTemporaryFile("w", suffix=".cfg", delete=False)
@@ -103,26 +132,35 @@ def serve(argv):
         if a["size"] > 0:
             tags.append("Assembly%d@0x04/%d/3=USINT[%d]" % (a["instance"], a["instance"], a["size"]))
     cmd = [sys.executable, "-I", "-m", "cpppo.server.enip", "--address", "0.0.0.0:%d" % args.port,
-           "--no-config", "--config", cfg.name] + tags
-    srv = subprocess.Popen(cmd, stdout=sys.stderr, stderr=sys.stderr)
+           "--config", cfg.name] + tags
+    # A session of its own: cpppo signals its whole process group when it stops.
+    srv = subprocess.Popen(cmd, stdout=sys.stderr, stderr=sys.stderr, start_new_session=True)
 
-    def stop(*_):
-        try:
-            os.unlink(args.ready_file)
-        except OSError:
-            pass
+    # The handler only notes the signal; the loops below stop the simulator.
+    # (Waiting for it inside the handler would nest in Popen.wait.)
+    stopping = []
+    signal.signal(signal.SIGTERM, lambda *_: stopping.append(True))
+    signal.signal(signal.SIGINT, lambda *_: stopping.append(True))
+
+    def stop():
+        if args.ready_file:
+            try:
+                os.unlink(args.ready_file)
+            except OSError:
+                pass
         srv.terminate()
         try:
-            srv.wait(10)
+            srv.wait(5)
         except subprocess.TimeoutExpired:
             srv.kill()
+            srv.wait()
         emit({"event": "stopped", "adapter": ADAPTER})
-        sys.exit(0)
+        return 0
 
-    signal.signal(signal.SIGTERM, stop)
-    signal.signal(signal.SIGINT, stop)
     deadline = time.time() + 30
     while True:
+        if stopping:
+            return stop()
         if srv.poll() is not None:
             print("cpppo exited", file=sys.stderr)
             return 1
@@ -152,9 +190,12 @@ def serve(argv):
     if args.ready_file:
         open(args.ready_file, "w").close()
     emit({"event": "ready", "adapter": ADAPTER, "address": "%s:%d" % (ip, args.port), "fixture": fx["name"]})
-    srv.wait()
-    print("cpppo exited", file=sys.stderr)
-    return 1
+    while not stopping:
+        if srv.poll() is not None:
+            print("cpppo exited", file=sys.stderr)
+            return 1
+        time.sleep(0.1)
+    return stop()
 
 
 def identity_doc(i):
@@ -177,11 +218,11 @@ def details(via, ops):
 
 
 def run_client(op, argv):
-    p = argparse.ArgumentParser(prog="ethernetip-interop client " + op)
+    p = argparse.ArgumentParser(prog="ethernetip-interop client " + op, allow_abbrev=False)
     p.add_argument("--host", required=True)
     p.add_argument("--port", type=int, default=44818)
     p.add_argument("--timeout-ms", type=int, default=5000)
-    p.add_argument("--transport", default="tcp")
+    p.add_argument("--transport", default="tcp", choices=["tcp", "udp"])
     p.add_argument("--class", dest="cls", type=lambda s: int(s, 0), default=0)
     p.add_argument("--instance", type=lambda s: int(s, 0), default=0)
     p.add_argument("--attribute", type=lambda s: int(s, 0), default=0)
@@ -213,6 +254,18 @@ def run_client(op, argv):
             else:
                 ident = proxy(a.host, port=a.port, timeout=timeout).list_identity()
             doc["identity"] = identity_doc(dict(ident))
+        elif op == "list-services":
+            conn = enip_client.client(host=a.host, port=a.port, udp=(a.transport == "udp"), timeout=timeout)
+            with conn:
+                conn.list_services(timeout=timeout)
+                rsp, _ = enip_client.await_response(conn, timeout=timeout)
+            if not rsp:
+                doc["error"] = {"code": "timeout", "message": "no ListServices reply"}
+                return emit(doc, 1)
+            doc["services"] = [{"name": i.get("communications_service.service_name"),
+                                "version": i.get("communications_service.version"),
+                                "capabilities": i.get("communications_service.capability")}
+                               for i in rsp.enip.CIP.list_services.CPF.item]
         elif op in ("get-attribute", "get-attributes-all", "set-attribute", "multiple-get"):
             if op == "get-attribute":
                 ops = [("@%d/%d/%d" % (a.cls, a.instance, a.attribute), "USINT")]
@@ -273,6 +326,20 @@ def run_client(op, argv):
         return emit(doc, 1)
 
 
+def print_fixture(name):
+    """Writes /fixtures/<name>/fixture.json; a bad or unknown name is a usage error."""
+    if not name or "/" in name or "\\" in name or ".." in name:
+        print("invalid fixture name %s" % name, file=sys.stderr)
+        return 2
+    try:
+        with open("/fixtures/%s/fixture.json" % name, "rb") as f:
+            sys.stdout.buffer.write(f.read())
+        return 0
+    except OSError:
+        print("no fixture %s" % name, file=sys.stderr)
+        return 2
+
+
 def main(argv):
     if not argv:
         print("usage: ethernetip-interop server|client <op>|print-capabilities|print-fixture|version", file=sys.stderr)
@@ -287,30 +354,33 @@ def main(argv):
         return run_client(argv[1], argv[2:])
     if cmd == "print-capabilities":
         return emit({
-            "schemaVersion": "1.0", "adapter": ADAPTER, "upstream": "cpppo",
-            "roles": {"server": True, "client": True}, "fixtures": ["logix", "adapter"],
+            "schemaVersion": "1.0", "adapter": ADAPTER,
+            "adapterVersion": os.environ.get("ETHERNETIP_INTEROP_ADAPTER_VERSION", "dev"), "protocol": "ethernetip",
+            "upstream": {"name": "cpppo", "version": os.environ.get("ETHERNETIP_INTEROP_UPSTREAM_VERSION", ""),
+                         "revision": os.environ.get("ETHERNETIP_INTEROP_UPSTREAM_REVISION", ""),
+                         "license": "GPL-3.0", "language": "Python", "independentEngine": True},
+            "roles": {"server": True, "client": True}, "fixtures": ["logix"],
             "clientOperations": OPERATIONS,
-            "clientFeatures": {"listIdentityTcp": True, "listIdentityUdp": True, "connected": False,
-                               "unconnectedSend": True, "multipleService": True, "class1": False,
-                               "logixTags": True},
-            "serverFeatures": {"listIdentityTcp": True, "listIdentityUdp": True, "listServices": True,
+            "clientFeatures": {"listIdentityTcp": True, "listIdentityUdp": True, "listServices": True,
                                "getAttributeSingle": True, "setAttributeSingle": True, "getAttributesAll": True,
-                               "multipleService": True, "unconnectedSend": True, "class3": True, "class1": False,
+                               "multipleService": True, "unconnectedSend": True, "class3": False, "class1": False,
+                               "largeForwardOpen": False, "multicast": False, "inputOnly": False, "listenOnly": False,
+                               "logixTags": True, "readTagFragmented": True, "tagList": False},
+            "serverFeatures": {"listIdentityTcp": True, "listIdentityUdp": True, "listServices": True,
+                               "listInterfaces": True, "getAttributeSingle": True, "setAttributeSingle": True,
+                               "getAttributesAll": True, "getAttributeList": True, "multipleService": True,
+                               "unconnectedSend": True, "class3": True, "class1": False, "largeForwardOpen": True,
+                               "multicast": False, "inputOnly": False, "listenOnly": False,
                                "logixTags": True, "readTagFragmented": True, "writeTagFragmented": True,
                                "readModifyWrite": False, "tagList": False, "templates": False,
-                               "errorsCloseSession": True},
+                               "tcpipObject": False, "ethernetLinkObject": False, "errorsCloseSession": True},
         })
     if cmd == "print-fixture":
-        name = argv[1] if len(argv) > 1 else "logix"
-        try:
-            with open("/fixtures/%s/fixture.json" % name) as f:
-                sys.stdout.write(f.read())
-            return 0
-        except OSError:
-            return 2
+        return print_fixture(argv[1] if len(argv) > 1 else "logix")
     if cmd == "version":
         return emit({"adapter": ADAPTER, "adapterVersion": os.environ.get("ETHERNETIP_INTEROP_ADAPTER_VERSION", "dev"),
-                     "upstream": "cpppo", "upstreamVersion": "5.2.5",
+                     "upstream": "cpppo",
+                     "upstreamVersion": os.environ.get("ETHERNETIP_INTEROP_UPSTREAM_VERSION", ""),
                      "upstreamRevision": os.environ.get("ETHERNETIP_INTEROP_UPSTREAM_REVISION", ""), "contract": "1.0"})
     print("unknown command %s" % cmd, file=sys.stderr)
     return 2

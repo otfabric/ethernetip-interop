@@ -12,14 +12,17 @@ ARG PYTHON_DIGEST=sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013e
 
 FROM ${BASE_REGISTRY}/python:3.14.8-slim-trixie@${PYTHON_DIGEST}
 ARG UPSTREAM_SHA=36aeb19b5cb47495df9fd1caa38ce9d2f6d12ea3
+ARG UPSTREAM_VERSION=1.2.16
 ARG ADAPTER_VERSION=dev
 ENV PYTHONDONTWRITEBYTECODE=1 PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1 \
-    ETHERNETIP_INTEROP_ADAPTER_VERSION=${ADAPTER_VERSION} ETHERNETIP_INTEROP_UPSTREAM_REVISION=${UPSTREAM_SHA}
+    ETHERNETIP_INTEROP_ADAPTER_VERSION=${ADAPTER_VERSION} ETHERNETIP_INTEROP_UPSTREAM_REVISION=${UPSTREAM_SHA} \
+    ETHERNETIP_INTEROP_UPSTREAM_VERSION=${UPSTREAM_VERSION}
 COPY adapters/pycomm3/requirements.txt /opt/adapter/requirements.txt
 RUN pip install --require-hashes --only-binary=:all: -r /opt/adapter/requirements.txt \
     && mkdir -p /licenses/pycomm3 \
     && python -c 'import importlib.metadata as m; d=m.distribution("pycomm3"); fs=[f for f in d.files if f.name.upper().startswith("LICENSE")]; open("/licenses/pycomm3/LICENSE","w").write(fs[0].read_text()) if fs else None' \
-    && python -m pip uninstall --yes --quiet pip setuptools wheel || true
+    && test -s /licenses/pycomm3/LICENSE \
+    && (python -m pip uninstall --yes --quiet pip setuptools wheel || true)
 COPY adapters/pycomm3/pycomm3_interop.py /opt/adapter/pycomm3_interop.py
 RUN python -I -c "import sys; sys.path.insert(0, '/opt/adapter'); import pycomm3_interop" \
     && printf '#!/bin/sh\nexec python3 -I /opt/adapter/pycomm3_interop.py "$@"\n' > /usr/local/bin/ethernetip-interop \

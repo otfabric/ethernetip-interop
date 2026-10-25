@@ -68,8 +68,15 @@ def jsonable(v):
     return v
 
 
-def generic(args, service, data=b""):
-    with CIPDriver(args.host) as drv:
+def driver(cls, host, timeout):
+    """A pycomm3 driver with the operation's timeout; opened by "with"."""
+    drv = cls(host)
+    drv.socket_timeout = timeout
+    return drv
+
+
+def generic(args, service, data, timeout):
+    with driver(CIPDriver, args.host, timeout) as drv:
         kwargs = dict(service=service, class_code=args.cls, instance=args.instance,
                       request_data=data, connected=args.connected, unconnected_send=False,
                       route_path=False, return_response_packet=True)
@@ -84,6 +91,20 @@ def generic(args, service, data=b""):
         return status, data, tag.error
 
 
+def print_fixture(name):
+    """Writes /fixtures/<name>/fixture.json; a bad or unknown name is a usage error."""
+    if not name or "/" in name or "\\" in name or ".." in name:
+        print("invalid fixture name %s" % name, file=sys.stderr)
+        return 2
+    try:
+        with open("/fixtures/%s/fixture.json" % name, "rb") as f:
+            sys.stdout.buffer.write(f.read())
+        return 0
+    except OSError:
+        print("no fixture %s" % name, file=sys.stderr)
+        return 2
+
+
 def main(argv):
     if not argv:
         print("usage: ethernetip-interop client <op> --host HOST ... | print-capabilities | print-fixture [NAME] | version", file=sys.stderr)
@@ -91,26 +112,26 @@ def main(argv):
     cmd = argv[0]
     if cmd == "print-capabilities":
         return emit({
-            "schemaVersion": "1.0", "adapter": ADAPTER, "upstream": "pycomm3",
+            "schemaVersion": "1.0", "adapter": ADAPTER,
+            "adapterVersion": os.environ.get("ETHERNETIP_INTEROP_ADAPTER_VERSION", "dev"), "protocol": "ethernetip",
+            "upstream": {"name": "pycomm3", "version": pycomm3.__version__,
+                         "revision": os.environ.get("ETHERNETIP_INTEROP_UPSTREAM_REVISION", ""),
+                         "license": "MIT", "language": "Python", "independentEngine": True},
             "roles": {"server": False, "client": True}, "fixtures": [],
             "clientOperations": OPERATIONS,
-            "clientFeatures": {"listIdentityTcp": True, "listIdentityUdp": True, "connected": True,
-                               "unconnectedSend": True, "multipleService": True, "class1": False,
-                               "largeForwardOpen": True, "logixTags": True},
+            "clientFeatures": {"listIdentityTcp": True, "listIdentityUdp": True, "listServices": False,
+                               "getAttributeSingle": True, "setAttributeSingle": True, "getAttributesAll": True,
+                               "multipleService": False, "unconnectedSend": True, "class3": True, "class1": False,
+                               "largeForwardOpen": True, "multicast": False, "inputOnly": False, "listenOnly": False,
+                               "logixTags": True, "readTagFragmented": True, "tagList": True},
+            "serverFeatures": {},
         })
     if cmd == "version":
         return emit({"adapter": ADAPTER, "adapterVersion": os.environ.get("ETHERNETIP_INTEROP_ADAPTER_VERSION", "dev"),
                      "upstream": "pycomm3", "upstreamVersion": pycomm3.__version__,
                      "upstreamRevision": os.environ.get("ETHERNETIP_INTEROP_UPSTREAM_REVISION", ""), "contract": "1.0"})
     if cmd == "print-fixture":
-        name = argv[1] if len(argv) > 1 else "adapter"
-        try:
-            with open("/fixtures/%s/fixture.json" % name) as f:
-                sys.stdout.write(f.read())
-            return 0
-        except OSError:
-            print("no fixture %s" % name, file=sys.stderr)
-            return 2
+        return print_fixture(argv[1] if len(argv) > 1 else "adapter")
     if cmd == "server":
         print("the pycomm3 adapter has no server role", file=sys.stderr)
         return 2
@@ -118,11 +139,11 @@ def main(argv):
         print("unknown command or operation", file=sys.stderr)
         return 2
     op = argv[1]
-    p = argparse.ArgumentParser(prog="ethernetip-interop client " + op)
+    p = argparse.ArgumentParser(prog="ethernetip-interop client " + op, allow_abbrev=False)
     p.add_argument("--host", required=True)
     p.add_argument("--port", type=int, default=44818)
     p.add_argument("--timeout-ms", type=int, default=5000)
-    p.add_argument("--transport", default="tcp")
+    p.add_argument("--transport", default="tcp", choices=["tcp", "udp"])
     p.add_argument("--class", dest="cls", type=lambda s: int(s, 0), default=0)
     p.add_argument("--instance", type=lambda s: int(s, 0), default=0)
     p.add_argument("--attribute", type=lambda s: int(s, 0), default=0)
@@ -139,32 +160,40 @@ def main(argv):
         return 2
     if args.port != 44818:
         args.host = "%s:%d" % (args.host, args.port)
+    timeout = args.timeout_ms / 1000.0
     doc = head(op)
     try:
-        if op == "list-identity":
-            d = CIPDriver.list_identity(args.host)
-            if not d:
-                doc["error"] = {"code": "failed", "message": "no ListIdentity reply"}
-                return emit(doc, 1)
-            doc["identity"] = identity_doc(d)
-        elif op == "discover":
+        if op == "discover" or (op == "list-identity" and args.transport == "udp"):
+            # pycomm3's discover(): ListIdentity over UDP to port 44818 of
+            # the address (unicast here), every reply within its timeout.
             found = [x for x in CIPDriver.discover(args.host)]
             if not found:
                 doc["error"] = {"code": "timeout", "message": "no reply"}
                 return emit(doc, 1)
             doc["identity"] = identity_doc(found[0])
+        elif op == "list-identity":
+            d = CIPDriver.list_identity(args.host)
+            if not d:
+                doc["error"] = {"code": "failed", "message": "no ListIdentity reply"}
+                return emit(doc, 1)
+            doc["identity"] = identity_doc(d)
         elif op in ("get-attribute", "get-attributes-all", "set-attribute"):
             service = {"get-attribute": 0x0E, "get-attributes-all": 0x01, "set-attribute": 0x10}[op]
-            status, data, err = generic(args, service, bytes.fromhex(args.data))
+            try:
+                payload = bytes.fromhex(args.data)
+            except ValueError:
+                print("--data: not hex", file=sys.stderr)
+                return 2
+            status, data, err = generic(args, service, payload, timeout)
             if status is None:
                 doc["error"] = {"code": "failed", "message": err or "no reply"}
                 return emit(doc, 1)
             doc.update(status=status, data=bytes(data).hex(), errorText=err)
         elif op == "identity":
-            with CIPDriver(args.host) as drv:
+            with driver(CIPDriver, args.host, timeout) as drv:
                 doc["module"] = jsonable(drv.get_module_info(0))
         else:
-            with LogixDriver(args.host) as plc:
+            with driver(LogixDriver, args.host, timeout) as plc:
                 if op == "tag-list":
                     doc["tags"] = [{"name": n, "type": d.get("data_type_name"), "dims": [x for x in (d.get("dimensions") or []) if x]}
                                    for n, d in sorted(plc.tags.items())]

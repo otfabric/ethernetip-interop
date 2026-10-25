@@ -5,14 +5,17 @@
 // EIPScanner as the originator and prints one JSON result document.
 
 #include <atomic>
+#include <cctype>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -97,6 +100,8 @@ std::string hexOf(const std::vector<uint8_t> &d) {
 
 std::vector<uint8_t> fromHex(const std::string &s) {
 	if (s.size() % 2) throw std::invalid_argument("odd hex length");
+	for (unsigned char c : s)
+		if (!std::isxdigit(c)) throw std::invalid_argument("not hex");
 	std::vector<uint8_t> out;
 	for (size_t i = 0; i < s.size(); i += 2) out.push_back(static_cast<uint8_t>(std::stoul(s.substr(i, 2), nullptr, 16)));
 	return out;
@@ -321,16 +326,48 @@ int run(const Args &a) {
 	return usage("unknown operation " + a.op);
 }
 
+const char *envOr(const char *k, const char *def) {
+	const char *v = std::getenv(k);
+	return v ? v : def;
+}
+
 int capabilities() {
-	std::cout << "{\"schemaVersion\":\"1.0\",\"adapter\":\"eipscanner\",\"upstream\":\"EIPScanner\",\"roles\":{\"server\":false,\"client\":true},"
-	             "\"fixtures\":[],\"clientOperations\":[";
+	std::cout << "{\"schemaVersion\":\"1.0\",\"adapter\":\"eipscanner\",\"adapterVersion\":"
+	          << str(envOr("ETHERNETIP_INTEROP_ADAPTER_VERSION", "dev"))
+	          << ",\"protocol\":\"ethernetip\",\"upstream\":{\"name\":\"EIPScanner\",\"version\":"
+	          << str(envOr("ETHERNETIP_INTEROP_UPSTREAM_VERSION", "")) << ",\"revision\":"
+	          << str(envOr("ETHERNETIP_INTEROP_UPSTREAM_REVISION", ""))
+	          << ",\"license\":\"MIT\",\"language\":\"C++\",\"independentEngine\":true},"
+	             "\"roles\":{\"server\":false,\"client\":true},\"fixtures\":[],\"clientOperations\":[";
 	for (size_t i = 0; i < sizeof kOps / sizeof kOps[0]; i++) std::cout << (i ? "," : "") << str(kOps[i]);
-	std::cout << "],\"clientFeatures\":{\"listIdentityTcp\":false,\"listIdentityUdp\":true,\"connected\":false,"
-	             "\"unconnectedSend\":false,\"multipleService\":true,\"class1\":true,\"largeForwardOpen\":true,"
-	             "\"multicast\":false,\"logixTags\":false}}"
+	std::cout << "],\"clientFeatures\":{\"listIdentityTcp\":false,\"listIdentityUdp\":true,\"listServices\":false,"
+	             "\"getAttributeSingle\":true,\"setAttributeSingle\":true,\"getAttributesAll\":true,"
+	             "\"multipleService\":true,\"unconnectedSend\":false,\"class3\":false,\"class1\":true,"
+	             "\"largeForwardOpen\":true,\"multicast\":false,\"inputOnly\":true,\"listenOnly\":false,"
+	             "\"logixTags\":false,\"readTagFragmented\":false,\"tagList\":false},\"serverFeatures\":{}}"
 	          << std::endl;
 	return 0;
 }
+
+// printFixture writes /fixtures/<name>/fixture.json; a name with a path
+// separator or ".." is a usage error, as is a name without a fixture.
+int printFixture(const std::string &name) {
+	if (name.empty() || name.find('/') != std::string::npos || name.find('\\') != std::string::npos ||
+	    name.find("..") != std::string::npos)
+		return usage("invalid fixture name " + name);
+	std::ifstream in("/fixtures/" + name + "/fixture.json", std::ios::binary);
+	if (!in) return usage("no fixture " + name);
+	std::cout << in.rdbuf();
+	return 0;
+}
+
+// Flags each operation takes; anything else is a usage error. Switches take
+// no value.
+const std::set<std::string> kValueFlags = {"host", "port", "timeout-ms", "transport", "class", "instance", "attribute",
+                                           "data", "path", "config", "output", "input", "output-size", "input-size",
+                                           "rpi-ms", "duration-ms", "output-data"};
+const std::set<std::string> kNumericFlags = {"port", "timeout-ms", "class", "instance", "attribute", "config", "output",
+                                             "input", "output-size", "input-size", "rpi-ms", "duration-ms"};
 
 } // namespace
 
@@ -341,15 +378,13 @@ int main(int argc, char **argv) {
 	if (args.empty()) return usage("usage: ethernetip-interop client <op> --host HOST ... | print-capabilities | print-fixture [NAME] | version");
 	if (args[0] == "print-capabilities") return capabilities();
 	if (args[0] == "version") {
-		std::cout << "{\"adapter\":\"eipscanner\",\"adapterVersion\":" << str(std::getenv("ETHERNETIP_INTEROP_ADAPTER_VERSION") ? std::getenv("ETHERNETIP_INTEROP_ADAPTER_VERSION") : "dev")
-		          << ",\"upstream\":\"EIPScanner\",\"upstreamRevision\":" << str(std::getenv("ETHERNETIP_INTEROP_UPSTREAM_REVISION") ? std::getenv("ETHERNETIP_INTEROP_UPSTREAM_REVISION") : "")
+		std::cout << "{\"adapter\":\"eipscanner\",\"adapterVersion\":" << str(envOr("ETHERNETIP_INTEROP_ADAPTER_VERSION", "dev"))
+		          << ",\"upstream\":\"EIPScanner\",\"upstreamVersion\":" << str(envOr("ETHERNETIP_INTEROP_UPSTREAM_VERSION", ""))
+		          << ",\"upstreamRevision\":" << str(envOr("ETHERNETIP_INTEROP_UPSTREAM_REVISION", ""))
 		          << ",\"contract\":\"1.0\"}" << std::endl;
 		return 0;
 	}
-	if (args[0] == "print-fixture") {
-		std::string name = args.size() > 1 ? args[1] : "adapter";
-		return std::system(("cat /fixtures/" + name + "/fixture.json").c_str()) == 0 ? 0 : 2;
-	}
+	if (args[0] == "print-fixture") return printFixture(args.size() > 1 ? args[1] : "adapter");
 	if (args[0] == "server") return usage("the eipscanner adapter has no server role");
 	if (args[0] != "client" || args.size() < 2) return usage("unknown command");
 	Args a;
@@ -364,13 +399,40 @@ int main(int argc, char **argv) {
 			a.kv[k] = "1";
 			continue;
 		}
+		if (k == "multicast" || k == "connected")
+			return usage("--" + k + " needs a feature EIPScanner does not have");
+		if (!kValueFlags.count(k)) return usage("unknown flag --" + k);
 		if (i + 1 >= args.size()) return usage("flag --" + k + " needs a value");
+		const std::string v = args[++i];
+		if (kNumericFlags.count(k)) {
+			try {
+				size_t end = 0;
+				std::stol(v, &end, 0);
+				if (end != v.size()) throw std::invalid_argument(v);
+			} catch (const std::exception &) {
+				return usage("--" + k + ": not a number: " + v);
+			}
+		}
+		if (k == "data" || k == "output-data") {
+			try {
+				fromHex(v);
+			} catch (const std::exception &) {
+				return usage("--" + k + ": not hex: " + v);
+			}
+		}
 		if (k == "path") {
-			a.paths.push_back(args[++i]);
+			a.paths.push_back(v);
 			continue;
 		}
-		a.kv[k] = args[++i];
+		a.kv[k] = v;
 	}
+	// EIPScanner sends ListIdentity over UDP only: that is the default here.
+	if (a.has("transport") && a.get("transport") != "udp" && a.get("transport") != "tcp")
+		return usage("--transport must be tcp or udp");
+	if (a.op == "list-identity" && a.get("transport", "udp") != "udp")
+		return usage("EIPScanner sends ListIdentity over UDP only");
+	if (a.has("output-data") && a.get("output-data").size() / 2 != static_cast<size_t>(a.num("output-size", 0)))
+		return usage("--output-data must be --output-size octets of hex");
 	if (!a.has("host")) return usage("--host is required");
 	try {
 		return run(a);

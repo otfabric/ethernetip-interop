@@ -1,10 +1,8 @@
-# Local build artifacts
-adapters/opendnp3/build/
-adapters/stepfunc/target/
-adapters/dscsystems/dnp3-interop
-adapters/tmw/vendor/
+# Self-test documents and summaries (make smoke, make selftest)
 reports/
-qualify/
+
+# Local build artifacts
+adapters/eipscanner/build/
 
 # Editors and OS
 .vscode/

@@ -1,0 +1,50 @@
+# Reference EtherNet/IP targets for local work: OpENer (opener-sample
+# fixture) and the cpppo simulator (logix fixture) on one private network.
+#
+#   docker compose up -d --wait        # both servers, waits for readiness
+#   docker compose down
+#
+# Explicit messaging from the host: 44818/tcp of each server is published on
+# loopback only (OpENer on 127.0.0.1:44818, cpppo on 127.0.0.1:44819). These
+# are unauthenticated EtherNet/IP targets and must not be reachable from any
+# other network.
+#
+# Class 1 I/O does NOT work from the host: the target sends its T->O
+# datagrams to the originator's own address at UDP 2222, and Docker's NAT
+# hides that address. Run the originator in a container on this network
+# instead, and address the servers by name or address:
+#
+#   docker run --rm --network ethernetip-interop \
+#     ghcr.io/otfabric/ethernetip-interop-eipscanner:dev client io --host <opener's address> ...
+#
+# ETHERNETIP_INTEROP_VERSION selects the image tag (default: dev, the local
+# build).
+
+x-server: &server
+  command: ["server"]
+  healthcheck:
+    test: ["CMD", "test", "-f", "/run/ethernetip-interop/ready"]
+    interval: 2s
+    timeout: 2s
+    retries: 15
+    start_period: 10s
+  stop_grace_period: 10s
+  networks: [ethernetip-interop]
+
+services:
+  opener:
+    <<: *server
+    image: ghcr.io/otfabric/ethernetip-interop-opener:${ETHERNETIP_INTEROP_VERSION:-dev}
+    ports:
+      - "127.0.0.1:44818:44818/tcp"
+
+  cpppo:
+    <<: *server
+    image: ghcr.io/otfabric/ethernetip-interop-cpppo:${ETHERNETIP_INTEROP_VERSION:-dev}
+    ports:
+      - "127.0.0.1:44819:44818/tcp"
+
+networks:
+  ethernetip-interop:
+    name: ethernetip-interop
+    driver: bridge
