@@ -1,0 +1,5 @@
+# cpppo and the one dependency its EtherNet/IP code imports, pinned by version
+# and hash (also in versions.yaml). cpppo's other declared dependency,
+# crypto_licensing, is not used by the EtherNet/IP code and not installed.
+cpppo==5.2.5 --hash=sha256:0257ba393f1e2bdd06ea712cead740e496c802b3e5275c1995ee2df31f29ed1c
+greenery==2.1 --hash=sha256:759c3bf40b6fe6ef0a6b373230d07470e0e315f32bcdbaf381901b0d8a6f91d1

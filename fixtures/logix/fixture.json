@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "1.0",
+  "name": "logix",
+  "description": "A Logix-style controller: controller-scoped tags of atomic types and arrays, served by cpppo and by the implementation under test, read and written by the Logix-capable originators.",
+  "identity": {
+    "vendorId": 1,
+    "deviceType": 14,
+    "productCode": 54,
+    "revision": "20.11",
+    "serialNumber": 2882400001,
+    "productName": "1756-L61/B LOGIX5561"
+  },
+  "assemblies": [
+    {"instance": 100, "kind": "input", "size": 32},
+    {"instance": 150, "kind": "output", "size": 32}
+  ],
+  "echoOutputToInput": false,
+  "slot": 0,
+  "tags": [
+    {"name": "Counter", "type": "DINT", "values": [42]},
+    {"name": "Temperature", "type": "REAL", "values": [21.5]},
+    {"name": "Small", "type": "SINT", "values": [-7]},
+    {"name": "Word", "type": "INT", "values": [1234]},
+    {"name": "Big", "type": "LINT", "values": [1099511627776]},
+    {"name": "Flags", "type": "DINT", "values": [0]},
+    {"name": "Speeds", "type": "INT", "count": 100, "pattern": {"multiplier": 3, "offset": 0}},
+    {"name": "Samples", "type": "DINT", "count": 300, "pattern": {"multiplier": 7, "offset": -1000}},
+    {"name": "Ratio", "type": "LREAL", "values": [0.125]},
+    {"name": "Running", "type": "BOOL", "values": [1]}
+  ]
+}

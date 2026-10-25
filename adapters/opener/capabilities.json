@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0",
+  "adapter": "opener",
+  "upstream": "OpENer",
+  "roles": {"server": true, "client": false},
+  "fixtures": ["opener-sample"],
+  "clientOperations": [],
+  "serverFeatures": {
+    "listIdentityTcp": true,
+    "listIdentityUdp": true,
+    "listServices": true,
+    "listInterfaces": true,
+    "getAttributeSingle": true,
+    "setAttributeSingle": true,
+    "getAttributesAll": true,
+    "getAttributeList": true,
+    "multipleService": false,
+    "unconnectedSend": false,
+    "class3": true,
+    "class1": true,
+    "largeForwardOpen": true,
+    "multicast": true,
+    "inputOnly": true,
+    "listenOnly": true,
+    "logixTags": false,
+    "tcpipObject": true,
+    "ethernetLinkObject": true
+  }
+}

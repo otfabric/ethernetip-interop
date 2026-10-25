@@ -1,0 +1,2 @@
+# pycomm3, pinned by version and hash (also in versions.yaml).
+pycomm3==1.2.16 --hash=sha256:88e95c70472154ee32233f76af126526db208830e1e803eb9f621c8bd1d8fcd0
