@@ -64,6 +64,7 @@ CASES=(
     "io-large|Class 1 I/O, Large_Forward_Open|io|class1 largeForwardOpen|class1 largeForwardOpen"
     "io-input-only|Class 1 I/O, input only|io|class1 inputOnly|class1 inputOnly"
     "io-refused|Forward_Open refusal (connection size)|io|class1|class1"
+    "io-config-data|Class 1 I/O, configuration data|io get-attribute|class1 configData getAttributeSingle|class1 configData getAttributeSingle"
     "logix-read|Logix Read Tag (atomic types)|read-tags|logixTags|logix"
     "logix-fragmented|Logix Read Tag Fragmented|read-tag|readTagFragmented|logix readTagFragmented"
     "logix-write|Logix Write Tag|write-tag read-tag|logixTags|logix"
@@ -133,6 +134,8 @@ run_case() {
     in_inst=$(jq -r '[.assemblies[] | select(.kind == "input")][0].instance // empty' <<<"${FX}")
     in_size=$(jq -r '[.assemblies[] | select(.kind == "input")][0].size // empty' <<<"${FX}")
     cfg_inst=$(jq -r '[.assemblies[] | select(.kind == "config")][0].instance // 0' <<<"${FX}")
+    local cfg_size
+    cfg_size=$(jq -r '[.assemblies[] | select(.kind == "config")][0].size // 0' <<<"${FX}")
     io_inst=$(jq -r '[.assemblies[] | select(.kind == "input-only")][0].instance // empty' <<<"${FX}")
     # Each client writes its own pattern, so that a value left by another
     # client cannot pass for its own.
@@ -210,6 +213,15 @@ run_case() {
             --input-size "${in_size}" --rpi-ms 10 --duration-ms 100
         expect '.ok and (.forwardOpen.status != 0 or .forwardOpen.refused == true)' || return 1
         NOTE="forwardOpen $(jq -c '.forwardOpen' <<<"${DOC}")" ;;
+    io-config-data)
+        [[ "${cfg_inst}" != 0 && -n "${out_inst}" && -n "${in_inst}" ]] || { NOTE="the fixture has no configuration, output or input assembly"; return 2; }
+        local cfg
+        cfg=$(repeat_hex "$(printf '%02x' $((16#${pat} + 3)))" "${cfg_size}")
+        op io --config "${cfg_inst}" --output "${out_inst}" --input "${in_inst}" --output-size "${out_size}" \
+            --input-size "${in_size}" --rpi-ms 10 --duration-ms 500 --config-data "${cfg}"
+        expect '.ok and .forwardOpen.status == 0 and .received >= 5 and .forwardClose.status == 0' || return 1
+        op get-attribute --class 4 --instance "${cfg_inst}" --attribute 3
+        expect ".ok and .status == 0 and .data == \"${cfg}\"" ;;
     logix-read)
         local tags want
         tags=$(jq -r '[.tags[] | select((.count // 1) == 1 and .type != "BOOL") | .name] | join(",")' <<<"${FX}")

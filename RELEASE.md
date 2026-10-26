@@ -17,9 +17,33 @@ Tags are immutable. A fix is a new version.
 
 ---
 
+## v0.2.0
+
+**Date:** 2026-10-26
+**Previous release:** v0.1.0
+
+## Summary
+
+More cases, no change to existing behaviour: configuration data for Class 1
+connections, Logix bit writes, structures and STRING for pycomm3, and a
+fourth fixture, `logix-structures`. Contract 1.0 and fixture schema 1.0
+gain optional additions only.
+
+## Changes
+
+- **EIPScanner adapter**: `io --config-data HEX` appends a data segment to the connection path; feature `configData`.
+- **pycomm3 adapter**: `write-tag --type BOOL` (bits of integers and BOOL array elements, by Read-Modify-Write), `--type STRING` and `--type JSON` (a structure); features `readModifyWrite` and `templates`.
+- **OpENer**: declares `configData` (server).
+- **Fixtures**: `logix-structures`, a controller with a structure template, structure, STRING, integer and BOOL array tags; the fixture format gains optional `templates`, and tags `strings` and `fields`, with schema and cross-field rules.
+- **Capability schema**: feature `configData`.
+- **Self-test**: case `io-config-data` (EIPScanner to OpENer passes).
+- **Docs**: quirks found by the new cases ([docs/CAPABILITIES.md](docs/CAPABILITIES.md)): OpENer refuses wrong configuration data with 0x0129 and wants the configuration point in a listen-only path; pycomm3 addresses BOOL arrays by DWORD and needs plain BOOL member types in templates.
+
+---
+
 ## v0.1.0
 
-**Date:** not yet tagged
+**Date:** 2026-10-26
 **Previous release:** none
 
 ## Summary

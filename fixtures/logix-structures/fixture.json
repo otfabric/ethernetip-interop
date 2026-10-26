@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "1.0",
+  "name": "logix-structures",
+  "description": "A Logix-style controller with a user-defined structure (BOOL, DINT, REAL, INT array and STRING members), structure and STRING tags, and integer and BOOL-array tags for bit writes. Served by the implementation under test; read and written by the Logix-capable originators.",
+  "identity": {
+    "vendorId": 1,
+    "deviceType": 14,
+    "productCode": 54,
+    "revision": "20.11",
+    "serialNumber": 2882400002,
+    "productName": "1756-L61/B LOGIX5561"
+  },
+  "assemblies": [],
+  "echoOutputToInput": false,
+  "slot": 0,
+  "templates": [
+    {
+      "name": "Motor",
+      "id": 257,
+      "handle": 23100,
+      "size": 108,
+      "members": [
+        {"name": "ZZZZZZZZZZMotor0", "type": "SINT", "offset": 0},
+        {"name": "Enabled", "type": "BOOL", "bit": 0, "offset": 0},
+        {"name": "Faulted", "type": "BOOL", "bit": 1, "offset": 0},
+        {"name": "Speed", "type": "DINT", "offset": 4},
+        {"name": "Current", "type": "REAL", "offset": 8},
+        {"name": "Setpoints", "type": "INT", "count": 4, "offset": 12},
+        {"name": "Label", "type": "STRING", "offset": 20}
+      ]
+    }
+  ],
+  "tags": [
+    {"name": "Flags", "type": "DINT", "values": [0]},
+    {"name": "Bits", "type": "BOOL", "count": 64, "pattern": {"multiplier": 0, "offset": 0}},
+    {"name": "Message", "type": "STRING", "strings": ["hello"]},
+    {"name": "Names", "type": "STRING", "count": 3, "strings": ["alpha", "beta", "gamma"]},
+    {"name": "Pump", "type": "Motor", "fields": [
+      {"Enabled": 1, "Faulted": 0, "Speed": 1500, "Current": 2.5, "Setpoints": [10, 20, 30, 40], "Label": "pump"}
+    ]},
+    {"name": "Fans", "type": "Motor", "count": 2, "fields": [
+      {"Enabled": 0, "Faulted": 1, "Speed": 600, "Current": 0.75, "Setpoints": [1, 2, 3, 4], "Label": "fan-a"},
+      {"Enabled": 1, "Faulted": 0, "Speed": 900, "Current": 1.25, "Setpoints": [5, 6, 7, 8], "Label": "fan-b"}
+    ]}
+  ]
+}

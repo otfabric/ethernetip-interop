@@ -2,30 +2,74 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/otfabric/ethernetip-interop/fixtures/schema/ethernetip-fixture.schema.json",
   "title": "ethernetip-interop fixture",
-  "description": "A simulated EtherNet/IP target: identity, assemblies and Logix tags. See docs/FIXTURES.md. The cross-field rules are in scripts/validate-fixtures.py.",
+  "description": "A simulated EtherNet/IP target: identity, assemblies, Logix structure templates and tags. See docs/FIXTURES.md. The cross-field rules are in scripts/validate-fixtures.py.",
   "type": "object",
-  "required": ["schemaVersion", "name", "description", "identity", "assemblies", "echoOutputToInput", "slot", "tags"],
+  "required": [
+    "schemaVersion",
+    "name",
+    "description",
+    "identity",
+    "assemblies",
+    "echoOutputToInput",
+    "slot",
+    "tags"
+  ],
   "additionalProperties": false,
   "properties": {
-    "schemaVersion": { "const": "1.0" },
-    "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
-    "description": { "type": "string", "minLength": 1 },
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
     "identity": {
       "type": "object",
-      "required": ["vendorId", "deviceType", "productCode", "revision", "serialNumber", "productName"],
+      "required": [
+        "vendorId",
+        "deviceType",
+        "productCode",
+        "revision",
+        "serialNumber",
+        "productName"
+      ],
       "additionalProperties": false,
       "properties": {
-        "vendorId": { "type": "integer", "minimum": 0, "maximum": 65535 },
-        "deviceType": { "type": "integer", "minimum": 0, "maximum": 65535 },
-        "productCode": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "vendorId": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "deviceType": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "productCode": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
         "revision": {
           "description": "major.minor, each 0..255 (USINT)",
-          "type": "string", "pattern": "^(0|[1-9][0-9]{0,2})\\.(0|[1-9][0-9]{0,2})$"
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,2})\\.(0|[1-9][0-9]{0,2})$"
         },
-        "serialNumber": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+        "serialNumber": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
         "productName": {
           "description": "SHORT_STRING; the Identity object allows at most 32 characters",
-          "type": "string", "minLength": 1, "maxLength": 32, "pattern": "^[\\x20-\\x7e]+$"
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[\\x20-\\x7e]+$"
         }
       }
     },
@@ -33,42 +77,281 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["instance", "kind", "size"],
+        "required": [
+          "instance",
+          "kind",
+          "size"
+        ],
         "additionalProperties": false,
         "properties": {
-          "instance": { "type": "integer", "minimum": 1, "maximum": 65535 },
-          "kind": { "enum": ["input", "output", "config", "input-only", "listen-only", "explicit"] },
-          "size": { "type": "integer", "minimum": 0, "maximum": 4000 }
+          "instance": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "kind": {
+            "enum": [
+              "input",
+              "output",
+              "config",
+              "input-only",
+              "listen-only",
+              "explicit"
+            ]
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4000
+          }
         }
       }
     },
-    "echoOutputToInput": { "type": "boolean" },
-    "slot": { "type": "integer", "minimum": 0, "maximum": 255 },
+    "echoOutputToInput": {
+      "type": "boolean"
+    },
+    "slot": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255
+    },
     "tags": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["name", "type"],
+        "required": [
+          "name",
+          "type"
+        ],
         "additionalProperties": false,
         "properties": {
-          "name": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,39}$" },
-          "type": { "enum": ["BOOL", "SINT", "INT", "DINT", "LINT", "USINT", "UINT", "UDINT", "ULINT", "REAL", "LREAL"] },
-          "count": { "type": "integer", "minimum": 2, "maximum": 65535 },
-          "values": { "type": "array", "minItems": 1, "items": { "type": "number" } },
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,39}$"
+          },
+          "type": {
+            "type": "string",
+            "description": "a CIP elementary type, STRING, or the name of a template",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,39}$"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 65535
+          },
+          "values": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "number"
+            }
+          },
           "pattern": {
             "type": "object",
-            "required": ["multiplier", "offset"],
+            "required": [
+              "multiplier",
+              "offset"
+            ],
             "additionalProperties": false,
             "properties": {
-              "multiplier": { "type": "number" },
-              "offset": { "type": "number" }
+              "multiplier": {
+                "type": "number"
+              },
+              "offset": {
+                "type": "number"
+              }
+            }
+          },
+          "strings": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "maxLength": 82,
+              "pattern": "^[\\x20-\\x7e]*$"
+            }
+          },
+          "fields": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object"
             }
           }
         },
         "oneOf": [
-          { "required": ["values"], "not": { "required": ["pattern"] } },
-          { "required": ["pattern", "count"], "not": { "required": ["values"] } }
+          {
+            "required": [
+              "values"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "pattern"
+                  ]
+                },
+                {
+                  "required": [
+                    "strings"
+                  ]
+                },
+                {
+                  "required": [
+                    "fields"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "required": [
+              "pattern",
+              "count"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "values"
+                  ]
+                },
+                {
+                  "required": [
+                    "strings"
+                  ]
+                },
+                {
+                  "required": [
+                    "fields"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "required": [
+              "strings"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "values"
+                  ]
+                },
+                {
+                  "required": [
+                    "pattern"
+                  ]
+                },
+                {
+                  "required": [
+                    "fields"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "required": [
+              "fields"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "values"
+                  ]
+                },
+                {
+                  "required": [
+                    "pattern"
+                  ]
+                },
+                {
+                  "required": [
+                    "strings"
+                  ]
+                }
+              ]
+            }
+          }
         ]
+      }
+    },
+    "templates": {
+      "description": "Logix structure (UDT) templates, added in ethernetip-interop v0.2.0; optional",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "id",
+          "handle",
+          "size",
+          "members"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,39}$"
+          },
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4095
+          },
+          "handle": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "members": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "type",
+                "offset"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,39}$"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "a CIP elementary type, STRING, or the name of a template defined before this one"
+                },
+                "offset": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 65535
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                "bit": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 7
+                }
+              }
+            }
+          }
+        }
       }
     }
   }

@@ -10,7 +10,8 @@ Two layers, both required:
   2. The cross-field rules a JSON Schema cannot express: unique assembly
      instances and tag names, assembly sizes that fit their kind, an echo
      that has an output and an input of the same size, tag values that fit
-     their CIP type, element counts that match the values.
+     their CIP type, element counts that match the values, structure
+     templates whose members fit, and structure values that match them.
 
 Usage: validate-fixtures.py [--require-schema] [fixture.json ...]
 """
@@ -39,6 +40,9 @@ INTEGER_RANGES = {
 FLOAT_TYPES = {"REAL", "LREAL"}
 CIP_TYPES = set(INTEGER_RANGES) | FLOAT_TYPES
 ZERO_SIZE_KINDS = {"input-only", "listen-only"}
+TYPE_SIZES = {"BOOL": 1, "SINT": 1, "USINT": 1, "INT": 2, "UINT": 2, "DINT": 4, "UDINT": 4, "REAL": 4,
+              "LINT": 8, "ULINT": 8, "LREAL": 8}
+STRING_SIZE, STRING_CAPACITY = 88, 82  # Logix STRING: DINT length and 82 characters, padded
 
 
 def is_float32(v):
@@ -56,28 +60,126 @@ def tag_values(t):
     return list(t.get("values", []))
 
 
-def value_errors(t):
+def scalar_errors(where, typ, v):
+    """The errors of one value of an elementary type."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return [f"{where}: {v!r} is not a number"]
+    if typ in FLOAT_TYPES:
+        if typ == "REAL" and not is_float32(float(v)):
+            return [f"{where}: {v} is not exactly representable as a REAL"]
+        return []
+    if v != int(v):
+        return [f"{where}: {v} is not an integer, but {typ} is"]
+    lo, hi = INTEGER_RANGES[typ]
+    if not lo <= int(v) <= hi:
+        return [f"{where}: {int(v)} is outside the range of {typ} ({lo}..{hi})"]
+    return []
+
+
+def string_errors(where, v):
+    if not isinstance(v, str):
+        return [f"{where}: {v!r} is not a string"]
+    if len(v) > STRING_CAPACITY:
+        return [f"{where}: {len(v)} characters, a STRING holds {STRING_CAPACITY}"]
+    return []
+
+
+def template_errors(fx):
+    """Checks the templates; returns the errors and the templates by name."""
+    errors, by_name, ids, handles = [], {}, set(), set()
+    for tp in fx.get("templates", []):
+        name = tp.get("name")
+        where = f"templates/{name}"
+        if str(name).upper() in CIP_TYPES | {"STRING"} or str(name).lower() in {n.lower() for n in by_name}:
+            errors.append(f"{where}: duplicate or reserved name")
+        for key, seen in (("id", ids), ("handle", handles)):
+            if tp.get(key) in seen:
+                errors.append(f"{where}: duplicate {key} {tp.get(key)}")
+            seen.add(tp.get(key))
+        size, members = tp.get("size", 0), set()
+        for m in tp.get("members", []):
+            mn, mt, off = m.get("name"), m.get("type"), m.get("offset", 0)
+            mw = f"{where}/{mn}"
+            if str(mn).lower() in members:
+                errors.append(f"{mw}: duplicate member")
+            members.add(str(mn).lower())
+            if mt == "BOOL" and "count" not in m:
+                if "bit" not in m:
+                    errors.append(f"{mw}: a BOOL member needs its bit in the host octet")
+                n = 1
+            elif "bit" in m:
+                errors.append(f"{mw}: only a scalar BOOL member has a bit")
+                n = 0
+            elif mt in TYPE_SIZES:
+                n = TYPE_SIZES[mt] * m.get("count", 1) if mt != "BOOL" else (m["count"] + 31) // 32 * 4
+            elif mt == "STRING":
+                n = STRING_SIZE * m.get("count", 1)
+            elif mt in by_name:
+                n = by_name[mt]["size"] * m.get("count", 1)
+            else:
+                errors.append(f"{mw}: type {mt!r} is not an elementary type, STRING or an earlier template")
+                n = 0
+            if off + n > size:
+                errors.append(f"{mw}: ends at {off + n}, beyond the size {size}")
+        if size % 4:
+            errors.append(f"{where}: size {size} is not a multiple of 4, as Logix aligns structures")
+        by_name[name] = tp
+    return errors, by_name
+
+
+def field_errors(where, tp, fields, templates):
+    """The errors of a structure value of template tp."""
+    if not isinstance(fields, dict):
+        return [f"{where}: {fields!r} is not an object"]
     errors = []
+    members = {m["name"]: m for m in tp.get("members", []) if not m["name"].startswith(("ZZZZZZZZZZ", "__"))}
+    for k, v in fields.items():
+        m = members.get(k)
+        if m is None:
+            errors.append(f"{where}/{k}: no such member of {tp['name']}")
+            continue
+        vs = v if "count" in m else [v]
+        if not isinstance(vs, list) or len(vs) != m.get("count", 1):
+            errors.append(f"{where}/{k}: needs {m.get('count', 1)} element(s)")
+            continue
+        for i, x in enumerate(vs):
+            xw = f"{where}/{k}[{i}]" if "count" in m else f"{where}/{k}"
+            if m["type"] == "STRING":
+                errors.extend(string_errors(xw, x))
+            elif m["type"] in templates:
+                errors.extend(field_errors(xw, templates[m["type"]], x, templates))
+            elif m["type"] in CIP_TYPES:
+                errors.extend(scalar_errors(xw, m["type"], x))
+    return errors
+
+
+def value_errors(t, templates=None):
+    errors = []
+    templates = templates or {}
     typ, name = t.get("type"), t.get("name")
+    count = t.get("count", 1)
+    if typ == "STRING" or typ in templates:
+        key = "strings" if typ == "STRING" else "fields"
+        vals = t.get(key)
+        if vals is None:
+            return [f"tags/{name}: a {typ} tag takes its initial value from {key!r}"]
+        if len(vals) != count:
+            errors.append(f"tags/{name}: {len(vals)} {key} for {count} element(s)")
+        for i, v in enumerate(vals):
+            if typ == "STRING":
+                errors.extend(string_errors(f"tags/{name}[{i}]", v))
+            else:
+                errors.extend(field_errors(f"tags/{name}[{i}]", templates[typ], v, templates))
+        return errors
+    if "strings" in t or "fields" in t:
+        return [f"tags/{name}: strings and fields are for STRING and structure tags"]
     if typ not in CIP_TYPES:
         return [f"tags/{name}: type {typ!r} is not one of the CIP types {sorted(CIP_TYPES)}"]
     count = t.get("count", 1)
     if "values" in t and len(t["values"]) != count:
         errors.append(f"tags/{name}: {len(t['values'])} values for {count} element(s)")
     for i, v in enumerate(tag_values(t)):
-        if isinstance(v, bool) or not isinstance(v, (int, float)):
-            errors.append(f"tags/{name}[{i}]: {v!r} is not a number")
-            continue
-        if typ in FLOAT_TYPES:
-            if typ == "REAL" and not is_float32(float(v)):
-                errors.append(f"tags/{name}[{i}]: {v} is not exactly representable as a REAL")
-            continue
-        if v != int(v):
-            errors.append(f"tags/{name}[{i}]: {v} is not an integer, but {typ} is")
-            continue
-        lo, hi = INTEGER_RANGES[typ]
-        if not lo <= int(v) <= hi:
-            errors.append(f"tags/{name}[{i}]: {int(v)} is outside the range of {typ} ({lo}..{hi})")
+        errors.extend(scalar_errors(f"tags/{name}[{i}]", typ, v))
     return errors
 
 
@@ -103,13 +205,15 @@ def semantic_errors(fx):
             errors.append("echoOutputToInput: needs exactly one input and one output assembly")
         elif ins[0].get("size") != outs[0].get("size"):
             errors.append(f"echoOutputToInput: output {outs[0].get('instance')} and input {ins[0].get('instance')} differ in size")
+    terrs, templates = template_errors(fx)
+    errors.extend(terrs)
     names = set()
     for t in fx.get("tags", []):
         n = str(t.get("name", "")).lower()
         if n in names:
             errors.append(f"tags/{t.get('name')}: duplicate name (tag names are case-insensitive)")
         names.add(n)
-        errors.extend(value_errors(t))
+        errors.extend(value_errors(t, templates))
     return errors
 
 

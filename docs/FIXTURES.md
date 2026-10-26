@@ -17,6 +17,7 @@ under test can serve the same fixture to the reference originators.
 | `opener-sample` | What OpENer's POSIX sample application serves: its identity (vendor 1, product code 65001, "OpENer PC") and assemblies 100 (input, 32 octets), 150 (output, 32), 151 (configuration, 10), 152 (input-only), 153 (listen-only), 154 (explicit, 32); output 150 is copied to input 100. It is compiled into OpENer: the fixture describes it and cannot change it | opener |
 | `adapter` | The adapter a library under test serves to the reference originators: OpENer's sample layout (minus the explicit assembly) with an identity of its own (vendor 65535, product code 42, revision 3.7, serial 0x12345678, "OT Fabric interop adapter") and the echo of output to input | no reference server: cpppo cannot serve it (the echo, and vendor 65535, see [CAPABILITIES.md](CAPABILITIES.md#cpppo)); it exists for consumers |
 | `logix` | A Logix-style controller: the identity of a 1756-L61 (vendor 1, device type 14, product code 54, revision 20.11) with ten controller-scoped tags of atomic types and arrays, and assemblies 100 and 150 as plain attributes (no echo) | cpppo |
+| `logix-structures` | A Logix-style controller with a structure template `Motor` (BOOL members in a hidden host SINT, DINT, REAL, INT[4] and a nested STRING), structure tags `Pump` and `Fans[2]`, STRING tags `Message` and `Names[3]`, a DINT `Flags` and a `BOOL[64]` `Bits` for bit writes; no assemblies. Added in v0.2.0 | no reference server: cpppo has no structure templates; it exists for consumers (a library under test serves it to pycomm3) |
 
 ## Format
 
@@ -46,6 +47,7 @@ under test can serve the same fixture to the reference originators.
 | `assemblies` | The Assembly object's instances (class 4), see [Assemblies](#assemblies) |
 | `echoOutputToInput` | Whether data written to the output assembly (by Set_Attribute_Single or Class 1 O->T data) appears in the input assembly |
 | `slot` | The backplane slot the target answers as, for Unconnected_Send routes (`1/<slot>`) |
+| `templates` | Optional (v0.2.0): structure templates, see [Templates](#templates) |
 | `tags` | Controller-scoped Logix tags, see [Tags](#tags); empty for a plain adapter |
 
 ### Identity
@@ -88,10 +90,15 @@ assembly, of the same size.
 | Field | Meaning |
 |-------|---------|
 | `name` | Logix tag name: a letter or `_`, then letters, digits, `_`; at most 40 characters. Unique, ignoring case (Logix and cpppo match names without case) |
-| `type` | CIP elementary type: `BOOL`, `SINT`, `INT`, `DINT`, `LINT`, `USINT`, `UINT`, `UDINT`, `ULINT`, `REAL`, `LREAL` |
+| `type` | CIP elementary type: `BOOL`, `SINT`, `INT`, `DINT`, `LINT`, `USINT`, `UINT`, `UDINT`, `ULINT`, `REAL`, `LREAL`; or `STRING` (the Logix STRING structure: a DINT length and 82 characters, 88 octets); or the name of a template |
 | `count` | Elements of a one-dimensional array, at least 2. Absent: a scalar |
 | `values` | The initial value of each element: one for a scalar, `count` for an array |
 | `pattern` | Instead of `values`, for an array: `{ "multiplier", "offset" }` |
+| `strings` | For a `STRING` tag, instead of `values`: the text of each element, at most 82 printable ASCII characters |
+| `fields` | For a structure tag, instead of `values`: one object per element, member name to value (a number, a string for a STRING member, a list for an array member, an object for a structure member); members left out start as zeros |
+
+A `BOOL` array is held as DWORDs, as in Logix: its size is rounded up to a
+multiple of 32.
 
 **The pattern generator.** Element *i* (0-based) of a tag with a `pattern`
 starts as *i* × `multiplier` + `offset`, rounded to an integer for the
@@ -104,6 +111,31 @@ consumer.
 A `BOOL` tag holds 0 or 1 (pycomm3 reports `true`/`false`). Every value must
 fit its type ([cross-field rules](#cross-field-rules)).
 
+### Templates
+
+```json
+"templates": [
+  { "name": "Motor", "id": 257, "handle": 23100, "size": 108, "members": [
+      { "name": "ZZZZZZZZZZMotor0", "type": "SINT", "offset": 0 },
+      { "name": "Enabled", "type": "BOOL", "bit": 0, "offset": 0 },
+      { "name": "Speed", "type": "DINT", "offset": 4 },
+      { "name": "Setpoints", "type": "INT", "count": 4, "offset": 12 },
+      { "name": "Label", "type": "STRING", "offset": 20 } ] }
+]
+```
+
+| Field | Meaning |
+|-------|---------|
+| `name` | The structure's name, as the Template object reports it; not an elementary type name or `STRING` |
+| `id` | Template instance, 1..4095; unique |
+| `handle` | Structure handle that Read Tag replies and Write Tag requests carry; unique |
+| `size` | Structure size in octets; a multiple of 4, as Logix aligns structures |
+| `members` | In order: `name`, `type` (elementary type, `STRING` or an earlier template), `offset` in octets, `count` for an array member, `bit` (0..7) for a BOOL member: its bit in the host octet at `offset` |
+
+A member whose name starts with `ZZZZZZZZZZ` or `__` is hidden, as in
+Logix: the host SINT of BOOL members is such a member, declared like any
+other.
+
 ## Cross-field rules
 
 `scripts/validate-fixtures.py` checks, beyond the schema:
@@ -114,6 +146,12 @@ fit its type ([cross-field rules](#cross-field-rules)).
 - `input-only` and `listen-only` assemblies have size 0, the others at least 1;
 - with `echoOutputToInput`, exactly one `input` and one `output` assembly, of the same size;
 - tag names are unique, ignoring case;
+- template names, ids and handles are unique; members are unique, of a known
+  type, inside the structure's size; a scalar BOOL member has a `bit`, nothing
+  else has; sizes are multiples of 4;
+- `strings` has `count` texts of at most 82 characters, for `STRING` tags
+  only; `fields` has `count` objects naming members of the template, whose
+  values fit the members' types;
 - tag types are among the CIP type names above;
 - `values` has `count` entries (one for a scalar); `pattern` comes with `count`;
 - every initial value, given or generated, fits its type: integers within the

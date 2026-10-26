@@ -148,7 +148,7 @@ docker run --rm --network "$net" ghcr.io/otfabric/ethernetip-interop-pycomm3:<ta
 ```
 
 **Expected values** come from the image: `print-fixture adapter` (or
-`logix`, `opener-sample`) prints the fixture it was built with, so
+`logix`, `logix-structures`, `opener-sample`) prints the fixture it was built with, so
 expectations cannot drift from the image. A library serving the `adapter`
 fixture gives the reference originators an identity and assemblies to check.
 
