@@ -6,7 +6,7 @@ it. Skip, do not fail, a scenario that needs a role, an operation or a
 feature an image does not declare.
 
 A feature is declared `true` when the adapter does it. The ones the
-cross-stack self-test can exercise with the eleven references are exercised
+cross-stack self-test can exercise with the twelve references are exercised
 there ([COMPATIBILITY.md](COMPATIBILITY.md)); a few cannot be, for want of a
 reference peer, and are marked so below.
 
@@ -34,7 +34,7 @@ One JSON object on one line ([schema](../schemas/capabilities.schema.json)):
 |-------|---------|
 | `adapterVersion` | Release tag the image was built for, `dev` locally |
 | `protocol` | `"ethernetip"` |
-| `upstream` | The stack: name, pinned version and commit, licence, language; `independentEngine`: its protocol engine is its own (true for all eleven) |
+| `upstream` | The stack: name, pinned version and commit, licence, language; `independentEngine`: its protocol engine is its own (true for all twelve) |
 | `roles` | `server` (target) and `client` (originator) |
 | `fixtures` | The fixtures `server` serves, the default first; empty without the server role |
 | `clientOperations` | The `client` operations; any other is a usage error |
@@ -74,12 +74,12 @@ One JSON object on one line ([schema](../schemas/capabilities.schema.json)):
 | Client (originator) | no | yes | yes | yes |
 | Fixtures served | `opener-sample` | | `logix` | |
 
-| | libplctag | gologix | pylogix | etherip | eiprs | nodeeip | eeip |
-|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| Upstream | libplctag 2.7.2 (C) | gologix 0.44.0-beta (Go) | pylogix 1.1.6 (Python) | etherip 1.0-67 (Java) | rseip 0.3.1-2 (Rust) | node-ethernet-ip 2.0.0 (TypeScript) | EEIP.NET 1.6.0 (C#) |
-| Server (target) | yes (ab_server) | yes | no | no | no | no | no |
-| Client (originator) | yes | yes | yes | yes | yes | yes | yes |
-| Fixtures served | `logix` | `logix`, `adapter` | | | | | |
+| | libplctag | gologix | pylogix | etherip | eiprs | nodeeip | eeip | lokieip |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| Upstream | libplctag 2.7.2 (C) | gologix 0.44.0-beta (Go) | pylogix 1.1.6 (Python) | etherip 1.0-67 (Java) | rseip 0.3.1-2 (Rust) | node-ethernet-ip 2.0.0 (TypeScript) | EEIP.NET 1.6.0 (C#) | go-ethernet-ip 2022-12-29 (Go) |
+| Server (target) | yes (ab_server) | yes | no | no | no | no | no | no |
+| Client (originator) | yes | yes | yes | yes | yes | yes | yes | yes |
+| Fixtures served | `logix` | `logix`, `adapter` | | | | | |  |
 
 Client operations:
 
@@ -95,17 +95,17 @@ Client operations:
 | `read-tag`, `read-tags`, `write-tag` | | yes | yes |
 | `tag-list` | | | yes |
 
-| Operation | libplctag | gologix | pylogix | etherip | eiprs | nodeeip | eeip |
-|-----------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| `list-identity` | | TCP only | UDP only (`Discover()`) | TCP, UDP | TCP, UDP | TCP, UDP | UDP only |
-| `discover` | | | yes | | | | |
-| `list-services` | | yes | | TCP, UDP | TCP only | | |
-| `get-attribute`, `set-attribute`, `get-attributes-all` | yes (also `--connected`) | yes (always connected) | yes (unconnected only) | `get-attribute`, `get-attributes-all` only | yes (also `--connected`) | yes (also `--connected`) | yes |
-| `multiple-get` | | yes | | | yes | yes | |
-| `identity` | Get_Attributes_All `@1/1` (`@identity` tag) | | `GetModuleProperties` (Unconnected_Send) | etherip's identity (`--route 1/N`: of slot N) | | Get_Attributes_All `@1/1` | Get_Attributes_All `@1/1` |
-| `io` | | | | | | | yes |
-| `read-tag`, `read-tags`, `write-tag` | yes | yes | yes | yes | yes | yes | |
-| `tag-list` | yes | yes | yes | | yes | yes | |
+| Operation | libplctag | gologix | pylogix | etherip | eiprs | nodeeip | eeip | lokieip |
+|-----------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| `list-identity` | | TCP only | UDP only (`Discover()`) | TCP, UDP | TCP, UDP | TCP, UDP | UDP only | TCP only (over its session) |
+| `discover` | | | yes | | | | |  |
+| `list-services` | | yes | | TCP, UDP | TCP only | | | TCP only |
+| `get-attribute`, `set-attribute`, `get-attributes-all` | yes (also `--connected`) | yes (always connected) | yes (unconnected only) | `get-attribute`, `get-attributes-all` only | yes (also `--connected`) | yes (also `--connected`) | yes | yes (also `--connected`, `--route 1/N`) |
+| `multiple-get` | | yes | | | yes | yes | | yes (packed by the adapter) |
+| `identity` | Get_Attributes_All `@1/1` (`@identity` tag) | | `GetModuleProperties` (Unconnected_Send) | etherip's identity (`--route 1/N`: of slot N) | | Get_Attributes_All `@1/1` | Get_Attributes_All `@1/1` |  |
+| `io` | | | | | | | yes |  |
+| `read-tag`, `read-tags`, `write-tag` | yes | yes | yes | yes | yes | yes | | yes (writes: scalars only) |
+| `tag-list` | yes | yes | yes | | yes | yes | | yes |
 
 Features (client / server; an absent feature is blank, or "–" in a
 client / server cell):
@@ -138,33 +138,33 @@ client / server cell):
 | `tcpipObject`, `ethernetLinkObject` | yes | | – / no | |
 | `errorsCloseSession` | no | | – / yes | |
 
-| Feature | libplctag (client / server) | gologix (client / server) | pylogix (client) | etherip (client) | eiprs (client) | nodeeip (client) | eeip (client) |
-|---------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| `listIdentityTcp` | no / no | yes / yes | no | yes | yes | yes | no |
-| `listIdentityUdp` | no / no | no / no | yes | yes | yes | yes | yes |
-| `listServices` | no / no | yes / no | no | yes | yes | no | no |
-| `listInterfaces` | – / no | – / no | | | | | |
-| `getAttributeSingle` | yes / no | yes / no | yes | yes | yes | yes | yes |
-| `setAttributeSingle` | yes / no | yes / no | yes | no | yes | yes | yes |
-| `getAttributesAll` | yes / no | yes / yes | yes | yes | yes | yes | yes |
-| `getAttributeList` | – / no | – / no | | | | | |
-| `multipleService` | no / yes | yes / no | no | no | yes | yes | no |
-| `unconnectedSend` | no / yes | no / yes | yes | yes | yes | no | no |
-| `class3` | yes / yes | yes / yes | no | no | yes | yes | no |
-| `class1` | no / no | no / yes | no | no | no | no | yes |
-| `largeForwardOpen` | yes / yes | yes / yes | yes | no | no | yes | yes |
-| `multicast` | no / no | no / no | no | no | no | no | yes |
-| `inputOnly` | no / no | no / yes | no | no | no | no | yes |
-| `listenOnly` | no / no | no / no | no | no | no | no | yes |
-| `logixTags` | yes / yes | yes / yes | yes | yes | yes | yes | no |
-| `readTagFragmented` | yes / yes | no / no | yes | no | yes | no | no |
-| `writeTagFragmented` | no / yes | no / no | | no | yes | no | |
-| `readModifyWrite` | yes / no | no / no | yes | no | yes | yes | |
-| `templates` | no / no | no / no | no | no | yes | yes | |
-| `configData` | no / no | no / no | | no | no | no | no |
-| `tagList` | yes / no | yes / no | yes | no | yes | yes | no |
-| `tcpipObject`, `ethernetLinkObject` | – / no | – / no | | | | | |
-| `errorsCloseSession` | – / no | – / yes | | | | | |
+| Feature | libplctag (client / server) | gologix (client / server) | pylogix (client) | etherip (client) | eiprs (client) | nodeeip (client) | eeip (client) | lokieip (client) |
+|---------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| `listIdentityTcp` | no / no | yes / yes | no | yes | yes | yes | no | yes |
+| `listIdentityUdp` | no / no | no / no | yes | yes | yes | yes | yes | no |
+| `listServices` | no / no | yes / no | no | yes | yes | no | no | yes |
+| `listInterfaces` | – / no | – / no | | | | | |  |
+| `getAttributeSingle` | yes / no | yes / no | yes | yes | yes | yes | yes | yes |
+| `setAttributeSingle` | yes / no | yes / no | yes | no | yes | yes | yes | yes |
+| `getAttributesAll` | yes / no | yes / yes | yes | yes | yes | yes | yes | yes |
+| `getAttributeList` | – / no | – / no | | | | | |  |
+| `multipleService` | no / yes | yes / no | no | no | yes | yes | no | yes |
+| `unconnectedSend` | no / yes | no / yes | yes | yes | yes | no | no | yes |
+| `class3` | yes / yes | yes / yes | no | no | yes | yes | no | yes |
+| `class1` | no / no | no / yes | no | no | no | no | yes | no |
+| `largeForwardOpen` | yes / yes | yes / yes | yes | no | no | yes | yes | no |
+| `multicast` | no / no | no / no | no | no | no | no | yes | no |
+| `inputOnly` | no / no | no / yes | no | no | no | no | yes | no |
+| `listenOnly` | no / no | no / no | no | no | no | no | yes | no |
+| `logixTags` | yes / yes | yes / yes | yes | yes | yes | yes | no | yes |
+| `readTagFragmented` | yes / yes | no / no | yes | no | yes | no | no | no |
+| `writeTagFragmented` | no / yes | no / no | | no | yes | no | | no |
+| `readModifyWrite` | yes / no | no / no | yes | no | yes | yes | | no |
+| `templates` | no / no | no / no | no | no | yes | yes | | no |
+| `configData` | no / no | no / no | | no | no | no | no | no |
+| `tagList` | yes / no | yes / no | yes | no | yes | yes | no | yes |
+| `tcpipObject`, `ethernetLinkObject` | – / no | – / no | | | | | |  |
+| `errorsCloseSession` | – / no | – / yes | | | | | |  |
 
 With libplctag (ab_server) and gologix serving too, these declared features
 have a peer among the references: `logixTags` (cpppo, ab_server and gologix
@@ -555,6 +555,53 @@ exercise them. They are declared from the stacks' sources
   a target that closes the connection instead leaves a zeroed buffer, read
   as success with connection IDs 0. The adapter reports that as
   `connection-lost` ("no Forward_Open reply").
+
+### lokieip
+
+loki-os's go-ethernet-ip (module pseudo-version
+v0.0.0-20221229063210-535f79752f63; the repository has no tags).
+
+- The library sets no socket timeouts: the adapter bounds every call
+  (`timeout`); a panic of the library on a reply it cannot parse is reported
+  as `protocol` (cpppo's encapsulation errors on an unknown tag or the tag
+  list).
+- No UDP: ListIdentity and ListServices go over the TCP session after
+  RegisterSession. ListServices reads a 16-octet name: cpppo's 15-octet one
+  comes back empty, gologix's with trailing spaces.
+- Statuses it does not check: RegisterSession, Forward_Open (it keeps a
+  garbage connection ID and marks itself connected) and the tag list reply
+  (except 0x06). A refused tag list (ab_server, gologix) gives an empty
+  list; an entry without a name is reported as `protocol`.
+- `--route` takes `1/<slot>` only. Generic requests go direct by default;
+  Logix operations always through Unconnected_Send to `1/<slot>` (default
+  `1/0`) unless `--connected`; a missing slot answers 0x01 / 0x0311.
+- `--connected`: Forward_Open (0x54) with path `01 <slot> 20 02 24 01`, RPI
+  1 s, connection size 500; no Forward_Close (the session is unregistered).
+  OpENer refuses the port segment, the library ignores the refusal, and the
+  request then times out. Large_Forward_Open exists in the library but is
+  not used (`largeForwardOpen` false).
+- `multiple-get`: the library's packing is unexported; the adapter packs the
+  Multiple Service Packet the same way.
+- Logix statuses: `Tag.Read` drops the status of a refused read (`status`
+  -1, "reports no value"); `Tag.Write` discards the reply, so `write-tag`
+  reports 0 whenever a reply arrives (a 100-character STRING write reports
+  0; the target stores it and the next read returns "").
+- Reads: `read-tag` of one element by name (members and elements work);
+  `--count N` reads the whole array by instance through the tag list. No
+  Read Tag Fragmented (arrays larger than one reply fail); BOOL arrays are
+  read with the bit count as element count (refused). Structures and arrays
+  of structures or STRINGs come back as one hex value; a scalar STRING is
+  decoded.
+- Writes: scalar tags of the tag list only, one value, by instance; STRING
+  as LEN and DATA members in one Multiple Service Packet. Arrays are refused
+  (the library writes a tag whole, with the dimension bits in the type);
+  no bit, Read-Modify-Write or member writes.
+- `read-tags`: a TagGroup by instance ID, one Multiple Service Packet; a tag
+  not in the tag list gives -1.
+- `tag-list`: exact dims; the type is the elementary name or STRING, null for
+  other structures and BOOL arrays; `programName` null.
+- The upstream repository contains a copy of Rockwell's 1756-PM020 manual;
+  it reaches only the build stage (module download), not the image.
 
 ## Where these come from
 
