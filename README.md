@@ -13,7 +13,7 @@ third-party protocol stacks into its own code.
 
 | Adapter | Implementation | Language | Server (target) | Client (originator) | Image |
 |---------|----------------|----------|:------:|:------:|-------|
-| `opener` | [OpENer](https://github.com/EIPStackGroup/OpENer) master `d8820ef` (v2.3-588) | C | yes ¹ | no | `ghcr.io/otfabric/ethernetip-interop-opener` |
+| `opener` | [OpENer](https://github.com/EIPStackGroup/OpENer) master `0e1ab7e` (v2.3-591) | C | yes ¹ | no | `ghcr.io/otfabric/ethernetip-interop-opener` |
 | `eipscanner` | [EIPScanner](https://github.com/nimbuscontrols/EIPScanner) master `12c89a5` (1.3.0-33) | C++ | no | yes | `ghcr.io/otfabric/ethernetip-interop-eipscanner` |
 | `cpppo` | [cpppo](https://github.com/pjkundert/cpppo) 5.2.5 | Python | yes ² | yes | `ghcr.io/otfabric/ethernetip-interop-cpppo` |
 | `pycomm3` | [pycomm3](https://github.com/ottowayi/pycomm3) 1.2.16 | Python | no | yes | `ghcr.io/otfabric/ethernetip-interop-pycomm3` |

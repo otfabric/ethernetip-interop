@@ -32,7 +32,7 @@ Tags are immutable. A fix is a new version.
 ## Summary
 
 A weekly check of every pin against the latest upstream, with candidate
-builds and self-tests of newer upstreams. Images and pins are unchanged.
+builds and self-tests of newer upstreams; OpENer moves to its master head.
 
 ## Changes
 
@@ -52,6 +52,10 @@ builds and self-tests of newer upstreams. Images and pins are unchanged.
   write the built upstream into their capability document at build time.
 - **`scripts/known-bugs.tsv`**: known bugs of specific upstream versions,
   recorded as `known` by the self-test for candidate builds.
+- **OpENer** 2.3-588 (`d8820ef`) → 2.3-591 (`0e1ab7e`), found by the first
+  candidate run: the three new upstream commits only update OpENer's own CI
+  workflow; the candidate passed the smoke test and the cross-stack self-test
+  unchanged (186 passed, 0 failed).
 
 ---
 

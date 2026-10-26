@@ -5,8 +5,8 @@
   "protocol": "ethernetip",
   "upstream": {
     "name": "OpENer",
-    "version": "2.3-588",
-    "revision": "d8820ef41ce30dda06d213438ba81c81de33ffe2",
+    "version": "2.3-591",
+    "revision": "0e1ab7ee5c272950c0dc8daf7793008d7a518912",
     "license": "LicenseRef-OpENer (adapted BSD; ODVA Terms of Usage for products)",
     "language": "C",
     "independentEngine": true

@@ -41,7 +41,7 @@ The cpppo adapter is a derivative work of the GPL-3.0 cpppo and carries
 
 | Component | Version | Licence | Source |
 |-----------|---------|---------|--------|
-| OpENer (EIPStackGroup; (c) 2009 Rockwell Automation, Inc.) | master `d8820ef41ce30dda06d213438ba81c81de33ffe2` (git describe v2.3-588), GitHub archive SHA-256 `6c34be6bfe294351a69544722079751f96cdc24ac1a43337dd3e22d843f5b95b` | adapted BSD ("Software distribution license for the EtherNet/IP(TM) communication stack") | https://github.com/EIPStackGroup/OpENer |
+| OpENer (EIPStackGroup; (c) 2009 Rockwell Automation, Inc.) | master `0e1ab7ee5c272950c0dc8daf7793008d7a518912` (git describe v2.3-591), GitHub archive SHA-256 `5b01333bdc300c1410cf9e02d33a564320b7a6094786a047065a7ec14b21d945` | adapted BSD ("Software distribution license for the EtherNet/IP(TM) communication stack") | https://github.com/EIPStackGroup/OpENer |
 | libcap2, iproute2 (Debian packages) | Debian trixie | BSD-3-Clause or GPL-2.0 (libcap), GPL-2.0 (iproute2) | https://www.debian.org |
 | Adapter | this repository, `adapters/opener/` | MIT | https://github.com/otfabric/ethernetip-interop |
 | Base system | Debian trixie-slim | various; see `/usr/share/doc/*/copyright` in the image | https://www.debian.org |
