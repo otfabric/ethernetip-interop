@@ -71,7 +71,7 @@
         "enum": ["listIdentityTcp", "listIdentityUdp", "listServices", "listInterfaces", "getAttributeSingle",
                  "setAttributeSingle", "getAttributesAll", "getAttributeList", "multipleService", "unconnectedSend",
                  "class3", "class1", "largeForwardOpen", "multicast", "inputOnly", "listenOnly", "logixTags",
-                 "readTagFragmented", "writeTagFragmented", "readModifyWrite", "tagList", "templates",
+                 "readTagFragmented", "writeTagFragmented", "readModifyWrite", "tagList", "templates", "configData",
                  "tcpipObject", "ethernetLinkObject", "errorsCloseSession"]
       },
       "additionalProperties": { "type": "boolean" }

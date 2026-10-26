@@ -58,9 +58,10 @@ One JSON object on one line ([schema](../schemas/capabilities.schema.json)):
 | `inputOnly`, `listenOnly` | Opens input-only (heartbeat O->T) / listen-only connections | Has such connection points |
 | `logixTags` | Logix Read Tag / Write Tag (`read-tag`, `read-tags`, `write-tag`) | Serves them on the fixture's tags |
 | `readTagFragmented`, `writeTagFragmented` | Uses the fragmented services for arrays | Serves them |
-| `readModifyWrite` | | Serves Read-Modify-Write (0x4E) |
+| `readModifyWrite` | Writes bits of integers and of BOOL arrays with Read-Modify-Write (0x4E) (`write-tag --type BOOL`) | Serves Read-Modify-Write (0x4E) |
 | `tagList` | Reads the tag list (`tag-list`); a client with it (pycomm3) needs it from the server before any tag service | Serves the Symbol object's instance attribute list (0x55) |
-| `templates` | | Serves Template objects (0x6C) |
+| `templates` | Uploads structure templates and reads and writes structure and STRING tags | Serves Template objects (0x6C) |
+| `configData` | Sends configuration data in the Forward_Open (`io --config-data`) | Applies it to the configuration assembly |
 | `tcpipObject`, `ethernetLinkObject` | | Has the TCP/IP Interface (0xF5) and Ethernet Link (0xF6) objects |
 | `errorsCloseSession` | | Answers some errors by closing the session (encapsulation status) instead of a CIP status |
 
@@ -108,7 +109,8 @@ Features (client / server):
 | `logixTags` | no | no | yes / yes | yes |
 | `readTagFragmented` | no | no | yes / yes | yes |
 | `writeTagFragmented` | no | | – / yes | |
-| `readModifyWrite`, `templates` | no | | – / no | |
+| `readModifyWrite`, `templates` | no | no | – / no | yes |
+| `configData` | yes | yes | no / no | no |
 | `tagList` | no | no | no / no | yes |
 | `tcpipObject`, `ethernetLinkObject` | yes | | – / no | |
 | `errorsCloseSession` | no | | – / yes | |
@@ -118,7 +120,10 @@ pycomm3's Logix features (`logixTags`, `readTagFragmented`, `tagList`: its
 `LogixDriver` needs a tag list, which cpppo does not serve), OpENer's
 `multicast` and `listenOnly` (EIPScanner has neither), `getAttributeList`,
 `listInterfaces`, `writeTagFragmented`, `tcpipObject` and
-`ethernetLinkObject`. They are declared from the stacks' sources
+`ethernetLinkObject`; pycomm3's `readModifyWrite` and `templates` (no
+reference server has them). A library under test serving the `logix` and
+`logix-structures` fixtures exercises them (go-ethernetip's interop tests
+do). They are declared from the stacks' sources
 ([research notes](#where-these-come-from)).
 
 ## Quirks by adapter
@@ -143,6 +148,12 @@ pycomm3's Logix features (`logixTags`, `readTagFragmented`, `tagList`: its
   Docker network, no NAT.
 - ListIdentity over UDP to a broadcast address is answered after a random
   delay of up to 2 s; unicast at once.
+- Configuration data of the wrong size is refused with 0x01 / 0x0129
+  (invalid configuration application path), not 0x0126.
+- A listen-only connection names the same three points as its owner:
+  configuration 151, listen-only 153, input 100; without 151 it is refused
+  with 0x012F. Without a multicast owner of input 100 it is refused with
+  0x0119.
 
 ### eipscanner
 
@@ -154,6 +165,8 @@ pycomm3's Logix features (`logixTags`, `readTagFragmented`, `tagList`: its
   no Unconnected_Send, no symbolic segments (no Logix tags).
 - `multiple-get` packs the Multiple Service Packet in the adapter with
   EIPScanner's request encoder; EIPScanner has no helper for it.
+- `io --config-data`: the adapter appends the data segment to EIPScanner's
+  connection path (EIPScanner has no parameter for it).
 - `io`: EIPScanner binds UDP 2222 itself and sends no T->O socket address
   item, so the target sends T->O to the originator's address. It reports a
   refused Forward_Open only in its log: the adapter reports `status` -1,
@@ -199,6 +212,14 @@ pycomm3's Logix features (`logixTags`, `readTagFragmented`, `tagList`: its
   the tag list (0x55 on 0x6B): a target without them (cpppo, OpENer) cannot
   serve its tag operations. pycomm3 1.2.16 sends Write Tag with the request
   repeated in one Connected Data item; Logix ignores the extra octets.
+- Bits (`write-tag --type BOOL` of `Tag.N` or `Bits[N]`) are written with
+  Read-Modify-Write. pycomm3 addresses a BOOL array by DWORD
+  (`Bits[37]` is sent as element 1, bit 5), as Logix does, and expects the
+  tag list to report BOOL arrays as DWORD arrays. pycomm3 1.2.16 sends the
+  AND mask as 8 octets whatever the mask size.
+- Structure templates: a BOOL member's type must be plain BOOL (0x00C1),
+  its bit in the member's info word; pycomm3 reads any other type as a
+  template id. Structure writes (`--type JSON`) need every member.
 - Logix results carry pycomm3's error text, not the CIP status: `status` is
   0 or -1 ([CONTAINER_CONTRACT.md](CONTAINER_CONTRACT.md#result-document)).
 - `generic_message` is sent without route path: pycomm3 would otherwise

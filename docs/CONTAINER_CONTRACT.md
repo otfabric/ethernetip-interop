@@ -49,7 +49,7 @@ explicit-messaging client).
 | Default command | `server` for images with the server role (opener, cpppo), `print-capabilities` for the others |
 | Ports | 44818/tcp and 44818/udp (encapsulation: explicit messaging, ListIdentity, ListServices); 2222/udp (Class 1 I/O; the opener image) |
 | User | non-root, uid 10001 |
-| Fixtures | `/fixtures/<name>/fixture.json` (baked in: `adapter`, `logix`, `opener-sample`) |
+| Fixtures | `/fixtures/<name>/fixture.json` (baked in: `adapter`, `logix`, `logix-structures`, `opener-sample`) |
 | Readiness file | `/run/ethernetip-interop/ready` |
 | Health check | built into the server images: `test -f /run/ethernetip-interop/ready` |
 | Licences | `/licenses/` (see [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)) |
@@ -143,11 +143,18 @@ a usage error.
 | `io` | see below | Forward_Open (or Large_Forward_Open), Class 1 I/O for a duration, Forward_Close | eipscanner |
 | `read-tag` | `--tag NAME`, `--count N` (1), `--type T` (cpppo: element type of an array, for the fragment offsets), `--route` (cpppo) | Logix Read Tag (0x4C); an array (`--count` > 1) with Read Tag Fragmented (0x52) | cpppo, pycomm3 |
 | `read-tags` | `--tags A,B,C`, `--route` (cpppo) | Read Tag of each (cpppo: in sequence; pycomm3: in a Multiple Service Packet) | cpppo, pycomm3 |
-| `write-tag` | `--tag NAME --type T --values V1,V2,...`, `--route` (cpppo) | Logix Write Tag (0x4D) of as many elements as values, from element 0 | cpppo, pycomm3 |
+| `write-tag` | `--tag NAME --type T --values V1,V2,...`, `--route` (cpppo) | Logix Write Tag (0x4D) of as many elements as values, from element 0; pycomm3: Write Tag Fragmented (0x53) when it does not fit one request, and the types below | cpppo, pycomm3 |
 | `tag-list` | | pycomm3's `LogixDriver` open: the controller's tag list (Symbol object 0x6B, Get_Instance_Attribute_List 0x55) and program name | pycomm3 |
 
 `--type` names a CIP elementary type: `BOOL`, `SINT`, `INT`, `DINT`, `LINT`,
-`USINT`, `UINT`, `UDINT`, `ULINT`, `REAL`, `LREAL`.
+`USINT`, `UINT`, `UDINT`, `ULINT`, `REAL`, `LREAL`. pycomm3's `write-tag` also
+takes (v0.2.0):
+
+| `--type` | `--values` | Sends |
+|----------|------------|-------|
+| `BOOL` | `true`/`false` or `1`/`0` per element | for a bit of an integer (`Flags.3`) or an element of a BOOL array (`Bits[37]`): Read-Modify-Write Tag (0x4E) on the integer or on the DWORD holding the bit |
+| `STRING` | one text (commas included) | Write Tag of a STRING structure |
+| `JSON` | one JSON value | a structure as an object of its members (`{"Speed": 5, ...}`): Write Tag of the whole structure |
 
 `--route` (cpppo): the route path for Unconnected_Send, for example `1/0`
 (backplane, slot 0). pycomm3's `LogixDriver` always routes to slot 0 itself;
@@ -170,6 +177,7 @@ Forward_Open if that is refused) and sends the request over it.
 | `--output-data HEX` | zeros | O->T data; must be `--output-size` octets |
 | `--large` | | Large_Forward_Open (0x5B) instead of Forward_Open (0x54) |
 | `--multicast` | | T->O multicast. Usage error on EIPScanner, which has no multicast |
+| `--config-data HEX` | none | Configuration data (v0.2.0): a simple data segment (0x80) at the end of the connection path, for the configuration assembly. An even number of octets, at most 510 (eipscanner) |
 
 The connection is point-to-point (T->O unicast unless `--multicast`),
 transport class 1, cyclic; O->T with the 32-bit run/idle header (run), T->O

@@ -91,6 +91,20 @@ def generic(args, service, data, timeout):
         return status, data, tag.error
 
 
+def write_values(typ, text):
+    """The values of write-tag: numbers of an elementary type, comma-separated;
+    BOOL true/false (a bit of an integer, "Flags.3", or of a BOOL array,
+    "Bits[5]", which pycomm3 writes with Read Modify Write); one STRING; or
+    one JSON value (a structure as an object of its members)."""
+    if typ == "STRING":
+        return [text]
+    if typ == "JSON":
+        return [json.loads(text)]
+    if typ == "BOOL":
+        return [v.strip().lower() in ("1", "true") for v in text.split(",")]
+    return [float(v) if typ in ("REAL", "LREAL") else int(v, 0) for v in text.split(",")]
+
+
 def print_fixture(name):
     """Writes /fixtures/<name>/fixture.json; a bad or unknown name is a usage error."""
     if not name or "/" in name or "\\" in name or ".." in name:
@@ -123,7 +137,8 @@ def main(argv):
                                "getAttributeSingle": True, "setAttributeSingle": True, "getAttributesAll": True,
                                "multipleService": False, "unconnectedSend": True, "class3": True, "class1": False,
                                "largeForwardOpen": True, "multicast": False, "inputOnly": False, "listenOnly": False,
-                               "logixTags": True, "readTagFragmented": True, "tagList": True},
+                               "logixTags": True, "readTagFragmented": True, "tagList": True,
+                               "readModifyWrite": True, "templates": True},
             "serverFeatures": {},
         })
     if cmd == "version":
@@ -208,7 +223,7 @@ def main(argv):
                     doc["results"] = [{"tag": t.tag, "values": jsonable(t.value if isinstance(t.value, list) else [t.value]),
                                        "errorText": t.error} for t in res]
                 elif op == "write-tag":
-                    vals = [float(v) if args.type in ("REAL", "LREAL") else int(v, 0) for v in args.values.split(",")]
+                    vals = write_values(args.type, args.values)
                     name = args.tag if len(vals) == 1 else "%s{%d}" % (args.tag, len(vals))
                     t = plc.write((name, vals[0] if len(vals) == 1 else vals))
                     doc.update(status=0 if t.error is None else -1, errorText=t.error)

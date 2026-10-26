@@ -271,6 +271,15 @@ int run(const Args &a) {
 		if (a.num("config", 0) > 0) push(0x24, a.num("config", 0));
 		push(0x2C, a.num("output", 0));
 		push(0x2C, a.num("input", 0));
+		if (a.has("config-data")) {
+			// Configuration data: a simple data segment (0x80, size in
+			// words) at the end of the connection path.
+			const std::vector<uint8_t> cd = fromHex(a.get("config-data"));
+			if (cd.size() % 2 || cd.size() > 510) return usage("--config-data: an even number of octets, at most 510");
+			cp.push_back(0x80);
+			cp.push_back(static_cast<uint8_t>(cd.size() / 2));
+			cp.insert(cp.end(), cd.begin(), cd.end());
+		}
 		p.connectionPath = cp;
 		const long outSize = a.num("output-size", 0), inSize = a.num("input-size", 0);
 		p.o2tRealTimeFormat = outSize > 0; // 32-bit run/idle header O->T, none for heartbeats
@@ -344,7 +353,8 @@ int capabilities() {
 	             "\"getAttributeSingle\":true,\"setAttributeSingle\":true,\"getAttributesAll\":true,"
 	             "\"multipleService\":true,\"unconnectedSend\":false,\"class3\":false,\"class1\":true,"
 	             "\"largeForwardOpen\":true,\"multicast\":false,\"inputOnly\":true,\"listenOnly\":false,"
-	             "\"logixTags\":false,\"readTagFragmented\":false,\"tagList\":false},\"serverFeatures\":{}}"
+	             "\"logixTags\":false,\"readTagFragmented\":false,\"tagList\":false,\"configData\":true},"
+	             "\"serverFeatures\":{}}"
 	          << std::endl;
 	return 0;
 }
@@ -365,7 +375,7 @@ int printFixture(const std::string &name) {
 // no value.
 const std::set<std::string> kValueFlags = {"host", "port", "timeout-ms", "transport", "class", "instance", "attribute",
                                            "data", "path", "config", "output", "input", "output-size", "input-size",
-                                           "rpi-ms", "duration-ms", "output-data"};
+                                           "rpi-ms", "duration-ms", "output-data", "config-data"};
 const std::set<std::string> kNumericFlags = {"port", "timeout-ms", "class", "instance", "attribute", "config", "output",
                                              "input", "output-size", "input-size", "rpi-ms", "duration-ms"};
 
@@ -413,7 +423,7 @@ int main(int argc, char **argv) {
 				return usage("--" + k + ": not a number: " + v);
 			}
 		}
-		if (k == "data" || k == "output-data") {
+		if (k == "data" || k == "output-data" || k == "config-data") {
 			try {
 				fromHex(v);
 			} catch (const std::exception &) {
