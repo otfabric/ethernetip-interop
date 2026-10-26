@@ -24,6 +24,37 @@ Tags are immutable. A fix is a new version.
 
 ---
 
+## v0.5.0
+
+**Date:** not yet tagged
+**Previous release:** v0.4.0
+
+## Summary
+
+A weekly check of every pin against the latest upstream, with candidate
+builds and self-tests of newer upstreams. Images and pins are unchanged.
+
+## Changes
+
+- **Upstream candidates** workflow (`.github/workflows/candidate.yml`, weekly
+  and on demand): `scripts/latest-upstream.py` compares each adapter's pin
+  with the newest release (libplctag, gologix, cpppo, pycomm3, pylogix,
+  nodeeip) or with the head of the default branch (opener, eipscanner,
+  etherip, eiprs, eeip, lokieip); where a pin is behind, the adapter is built
+  on the latest upstream and smoke- and cross-stack-tested against the other
+  pins. The decision table goes to the Job Summary and to an issue that stays
+  open while any pin is behind. Pins are never moved automatically.
+- **`make candidate-<adapter> CANDIDATE_VERSION=... CANDIDATE_SHA=...`**:
+  every Dockerfile accepts another upstream through `UPSTREAM_VERSION` and
+  `UPSTREAM_SHA`. At the pin the release build and its hash checks are
+  unchanged; any other value takes a candidate path (no recorded hash, says
+  `candidate build: ...` on stderr). The opener and libplctag images now
+  write the built upstream into their capability document at build time.
+- **`scripts/known-bugs.tsv`**: known bugs of specific upstream versions,
+  recorded as `known` by the self-test for candidate builds.
+
+---
+
 ## v0.4.0
 
 **Date:** 2026-10-26

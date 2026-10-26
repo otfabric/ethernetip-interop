@@ -18,14 +18,29 @@ FROM ${BASE_REGISTRY}/maven:3.9.11-eclipse-temurin-21-noble@${MAVEN_DIGEST} AS b
 ARG UPSTREAM_SHA=ce0688ae51be5652ec200fbe389667b36a638323
 ARG UPSTREAM_SHA256=35ad2cbb710be5bef6cae0b2441a9397534249ddb33e9ac4e1e377b2e6546c7e
 WORKDIR /src/etherip
-RUN curl -fsSL -o etherip.tar.gz "https://github.com/ornl-epics/etherip/archive/${UPSTREAM_SHA}.tar.gz" \
-    && echo "${UPSTREAM_SHA256}  etherip.tar.gz" | sha256sum -c - \
-    && tar xzf etherip.tar.gz --strip-components=1 \
-    && rm etherip.tar.gz
+# The pins of this file, to tell the release build from a candidate build.
+COPY adapters/etherip/Dockerfile /tmp/pins
+# The release build checks the archive of the pinned commit against its
+# SHA-256. A candidate build ("make candidate-etherip") overrides UPSTREAM_SHA
+# with another commit, whose archive has no recorded hash: it says so on
+# stderr and leaves /tmp/candidate behind for the steps below.
+RUN set -eu; \
+    pinned="$(sed -nE 's/^ARG UPSTREAM_SHA=(.+)$/\1/p' /tmp/pins | head -1)"; \
+    test -n "${pinned}"; \
+    if [ "${UPSTREAM_SHA}" != "${pinned}" ]; then \
+        printf '%s' "${UPSTREAM_SHA}" | grep -qE '^[0-9a-f]{40}$' || { echo "UPSTREAM_SHA must be a full commit hash" >&2; exit 1; }; \
+        echo "candidate build: etherip ${UPSTREAM_SHA} instead of the pin ${pinned}, no archive hash to check" >&2; \
+        touch /tmp/candidate; \
+    fi; \
+    curl -fsSL -o etherip.tar.gz "https://github.com/ornl-epics/etherip/archive/${UPSTREAM_SHA}.tar.gz"; \
+    if [ ! -e /tmp/candidate ]; then echo "${UPSTREAM_SHA256}  etherip.tar.gz" | sha256sum -c -; fi; \
+    tar xzf etherip.tar.gz --strip-components=1; \
+    rm etherip.tar.gz
 # The tests need a PLC: skipped (and not compiled, so JUnit is not fetched).
 # The plugins are Maven 3.9.11's default bindings plus the versions the pom pins.
 RUN mvn -B -q -Dmaven.test.skip=true package \
-    && cp target/etherip-1.0.0.jar /src/etherip.jar
+    && if [ -e /tmp/candidate ]; then cp target/etherip-*.jar /src/etherip.jar; \
+       else cp target/etherip-1.0.0.jar /src/etherip.jar; fi
 COPY adapters/etherip/src /src/adapter/src
 RUN mkdir -p /src/adapter/classes \
     && javac --release 21 -Xlint:-options -cp /src/etherip.jar -d /src/adapter/classes \

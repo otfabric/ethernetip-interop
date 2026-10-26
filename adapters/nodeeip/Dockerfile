@@ -20,7 +20,20 @@ ENV NODE_ENV=production NPM_CONFIG_UPDATE_NOTIFIER=false NPM_CONFIG_FUND=false N
     ETHERNETIP_INTEROP_UPSTREAM_VERSION=${UPSTREAM_VERSION}
 WORKDIR /opt/adapter
 COPY adapters/nodeeip/package.json adapters/nodeeip/package-lock.json /opt/adapter/
-RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund \
+# The release build installs package-lock.json with npm ci, every tarball
+# checked against its integrity hash. A candidate build ("make
+# candidate-nodeeip") overrides UPSTREAM_VERSION: the lock file does not apply
+# to it, so that release and its dependencies are resolved from the registry
+# without recorded hashes, which it says on stderr.
+RUN pinned="$(node -p 'require("./package-lock.json").packages["node_modules/ethernet-ip"].version')" \
+    && test -n "${pinned}" \
+    && if [ "${UPSTREAM_VERSION}" = "${pinned}" ]; then \
+         npm ci --omit=dev --ignore-scripts --no-audit --no-fund; \
+       else \
+         echo "candidate build: ethernet-ip ${UPSTREAM_VERSION} instead of the pin ${pinned}, no lock file" >&2 \
+         && rm package-lock.json && npm pkg set "dependencies.ethernet-ip=${UPSTREAM_VERSION}" \
+         && npm install --omit=dev --ignore-scripts --no-audit --no-fund --no-package-lock; \
+       fi \
     && test "$(node -p 'require("ethernet-ip/package.json").version')" = "${UPSTREAM_VERSION}" \
     && for d in node_modules/*/; do \
          n=$(basename "$d"); f=$(ls "$d" | grep -i '^licen[cs]e' | head -1); \

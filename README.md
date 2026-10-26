@@ -194,7 +194,7 @@ ethernetip-interop/
 │   ├── logix/           a Logix-style controller (cpppo)
 │   └── opener-sample/   what OpENer's sample application serves
 ├── schemas/             JSON Schemas of the capability and client result documents
-├── scripts/             validate, smoke, cross-stack self-test, version check
+├── scripts/             validate, smoke, cross-stack self-test, version check, latest upstream
 ├── docs/                contract, fixtures, capabilities, compatibility
 ├── licenses/            licence texts the adapters refer to
 ├── versions.yaml        every upstream pin and base image digest
@@ -210,6 +210,8 @@ make ci          # validate, lint, build, smoke, cross-stack self-test
 make validate    # versions.yaml against the build files; fixtures against the schema and the cross-field rules
 make lint        # shellcheck
 make buildx      # check the other architecture locally, under emulation (CI builds both natively)
+scripts/latest-upstream.py opener   # an adapter's pin against the latest upstream
+make candidate-opener CANDIDATE_VERSION=<version> CANDIDATE_SHA=<commit>   # self-test an adapter on another upstream than its pin
 ```
 
 `make smoke ADAPTERS=opener` and `make selftest ADAPTERS="opener eipscanner"`
@@ -217,6 +219,13 @@ narrow what is run; `VERBOSE=1` shows every check. The self-test keeps every
 result document under `reports/selftest/` with `summary.md` and
 `summary.tsv`. See [CONTRIBUTING.md](CONTRIBUTING.md) for adding an adapter,
 a fixture or a client operation.
+
+A weekly workflow, **Upstream candidates**, compares every pin with the
+latest upstream (the newest release, or the head of the default branch for
+the six stacks pinned to a commit), builds and self-tests a candidate image
+where a pin is behind, and keeps an issue open with the decision table while
+any pin is behind. Pins are never moved automatically; see
+[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md#upstream-candidates).
 
 ## Security
 

@@ -21,20 +21,39 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /src/eip-rs
-RUN curl -fsSL -o eip-rs.tar.gz "https://github.com/Joylei/eip-rs/archive/${UPSTREAM_SHA}.tar.gz" \
-    && echo "${UPSTREAM_SHA256}  eip-rs.tar.gz" | sha256sum -c - \
-    && tar xzf eip-rs.tar.gz --strip-components=1 \
-    && rm eip-rs.tar.gz
+# The pins of this file, to tell the release build from a candidate build.
+COPY adapters/eiprs/Dockerfile /tmp/pins
+# The release build checks the archive of the pinned commit against its
+# SHA-256. A candidate build ("make candidate-eiprs") overrides UPSTREAM_SHA
+# with another commit, whose archive has no recorded hash: it says so on
+# stderr and leaves /tmp/candidate behind for the steps below.
+RUN set -eu; \
+    pinned="$(sed -nE 's/^ARG UPSTREAM_SHA=(.+)$/\1/p' /tmp/pins | head -1)"; \
+    test -n "${pinned}"; \
+    if [ "${UPSTREAM_SHA}" != "${pinned}" ]; then \
+        printf '%s' "${UPSTREAM_SHA}" | grep -qE '^[0-9a-f]{40}$' || { echo "UPSTREAM_SHA must be a full commit hash" >&2; exit 1; }; \
+        echo "candidate build: eip-rs ${UPSTREAM_SHA} instead of the pin ${pinned}, no archive hash to check" >&2; \
+        touch /tmp/candidate; \
+    fi; \
+    curl -fsSL -o eip-rs.tar.gz "https://github.com/Joylei/eip-rs/archive/${UPSTREAM_SHA}.tar.gz"; \
+    if [ ! -e /tmp/candidate ]; then echo "${UPSTREAM_SHA256}  eip-rs.tar.gz" | sha256sum -c -; fi; \
+    tar xzf eip-rs.tar.gz --strip-components=1; \
+    rm eip-rs.tar.gz
 WORKDIR /src/adapter
 COPY adapters/eiprs/Cargo.toml adapters/eiprs/Cargo.lock ./
-RUN cargo fetch --locked \
+# A candidate's rseip crates may need other versions than Cargo.lock has:
+# only then is the lock file updated (and the build no longer --locked).
+RUN if [ -e /tmp/candidate ]; then \
+         echo "candidate build: Cargo.lock updated for the candidate's crates" >&2 && cargo fetch; \
+       else cargo fetch --locked; fi \
     && for d in /usr/local/cargo/registry/src/*/*/; do \
          n="$(basename "$d")"; mkdir -p "/licenses/crates/$n"; \
          cp "$d"LICENSE* "$d"COPYING* "$d"UNLICENSE* "/licenses/crates/$n/" 2>/dev/null || true; \
          rmdir --ignore-fail-on-non-empty "/licenses/crates/$n"; \
        done
 COPY adapters/eiprs/src ./src
-RUN cargo build --locked --release --offline \
+RUN locked=--locked && if [ -e /tmp/candidate ]; then locked=; fi \
+    && cargo build ${locked} --release --offline \
     && install -m 755 target/release/ethernetip-interop /usr/local/bin/ethernetip-interop
 
 FROM ${BASE_REGISTRY}/debian:trixie-slim@${DEBIAN_DIGEST}

@@ -17,10 +17,24 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential cmake ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /src/eipscanner
-RUN curl -fsSL -o eipscanner.tar.gz "https://github.com/nimbuscontrols/EIPScanner/archive/${UPSTREAM_SHA}.tar.gz" \
-    && echo "${UPSTREAM_SHA256}  eipscanner.tar.gz" | sha256sum -c - \
-    && tar xzf eipscanner.tar.gz --strip-components=1 \
-    && rm eipscanner.tar.gz
+# The pins of this file, to tell the release build from a candidate build.
+COPY adapters/eipscanner/Dockerfile /tmp/pins
+# The release build checks the archive of the pinned commit against its
+# SHA-256. A candidate build ("make candidate-eipscanner") overrides UPSTREAM_SHA
+# with another commit, whose archive has no recorded hash: it says so on
+# stderr and leaves /tmp/candidate behind for the steps below.
+RUN set -eu; \
+    pinned="$(sed -nE 's/^ARG UPSTREAM_SHA=(.+)$/\1/p' /tmp/pins | head -1)"; \
+    test -n "${pinned}"; \
+    if [ "${UPSTREAM_SHA}" != "${pinned}" ]; then \
+        printf '%s' "${UPSTREAM_SHA}" | grep -qE '^[0-9a-f]{40}$' || { echo "UPSTREAM_SHA must be a full commit hash" >&2; exit 1; }; \
+        echo "candidate build: EIPScanner ${UPSTREAM_SHA} instead of the pin ${pinned}, no archive hash to check" >&2; \
+        touch /tmp/candidate; \
+    fi; \
+    curl -fsSL -o eipscanner.tar.gz "https://github.com/nimbuscontrols/EIPScanner/archive/${UPSTREAM_SHA}.tar.gz"; \
+    if [ ! -e /tmp/candidate ]; then echo "${UPSTREAM_SHA256}  eipscanner.tar.gz" | sha256sum -c -; fi; \
+    tar xzf eipscanner.tar.gz --strip-components=1; \
+    rm eipscanner.tar.gz
 COPY adapters/eipscanner/CMakeLists.txt /src/adapter/CMakeLists.txt
 COPY adapters/eipscanner/src /src/adapter/src
 WORKDIR /src/build

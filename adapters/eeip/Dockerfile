@@ -25,10 +25,24 @@ ARG UPSTREAM_SHA=58b91a0c8e30227b1b97a637635d147a2a9655dc
 ARG UPSTREAM_SHA256=8ad4f3e498b6d02b1c65b8fae498100a9f9f90d6f691423e5c80559c4eceff5b
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
 WORKDIR /src/eeip
-RUN curl -fsSL -o eeip.tar.gz "https://github.com/rossmann-engineering/EEIP.NET/archive/${UPSTREAM_SHA}.tar.gz" \
-    && echo "${UPSTREAM_SHA256}  eeip.tar.gz" | sha256sum -c - \
-    && tar xzf eeip.tar.gz --strip-components=1 \
-    && rm eeip.tar.gz
+# The pins of this file, to tell the release build from a candidate build.
+COPY adapters/eeip/Dockerfile /tmp/pins
+# The release build checks the archive of the pinned commit against its
+# SHA-256. A candidate build ("make candidate-eeip") overrides UPSTREAM_SHA
+# with another commit, whose archive has no recorded hash: it says so on
+# stderr and leaves /tmp/candidate behind for the steps below.
+RUN set -eu; \
+    pinned="$(sed -nE 's/^ARG UPSTREAM_SHA=(.+)$/\1/p' /tmp/pins | head -1)"; \
+    test -n "${pinned}"; \
+    if [ "${UPSTREAM_SHA}" != "${pinned}" ]; then \
+        printf '%s' "${UPSTREAM_SHA}" | grep -qE '^[0-9a-f]{40}$' || { echo "UPSTREAM_SHA must be a full commit hash" >&2; exit 1; }; \
+        echo "candidate build: EEIP.NET ${UPSTREAM_SHA} instead of the pin ${pinned}, no archive hash to check" >&2; \
+        touch /tmp/candidate; \
+    fi; \
+    curl -fsSL -o eeip.tar.gz "https://github.com/rossmann-engineering/EEIP.NET/archive/${UPSTREAM_SHA}.tar.gz"; \
+    if [ ! -e /tmp/candidate ]; then echo "${UPSTREAM_SHA256}  eeip.tar.gz" | sha256sum -c -; fi; \
+    tar xzf eeip.tar.gz --strip-components=1; \
+    rm eeip.tar.gz
 COPY adapters/eeip/EEIP /src/adapter/EEIP
 COPY adapters/eeip/src /src/adapter/src
 RUN dotnet publish /src/adapter/src/Adapter.csproj -c Release -o /out -p:EeipSource=/src/eeip \

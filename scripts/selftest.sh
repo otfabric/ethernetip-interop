@@ -35,15 +35,17 @@ printf 'client\tserver\tcase\tfeature\toutcome\tnote\n' > "${SUMMARY}"
 trap cleanup EXIT
 network_up
 
-declare -A CAPS
+declare -A CAPS UPSTREAM
 SERVERS=() CLIENTS=()
 for a in "${ADAPTERS[@]}"; do
     CAPS[$a]=$(capabilities "$a")
     [[ -n "${CAPS[$a]}" ]] || { log "no capability document from $(image_of "$a")"; exit 2; }
+    UPSTREAM[$a]=$(jq -r '.upstream.version' <<<"${CAPS[$a]}")
     jq -e '.roles.server' <<<"${CAPS[$a]}" >/dev/null && SERVERS+=("$a")
     jq -e '.roles.client' <<<"${CAPS[$a]}" >/dev/null && CLIENTS+=("$a")
 done
 log "servers: ${SERVERS[*]:-none}; clients: ${CLIENTS[*]:-none}"
+log "upstreams: $(for a in "${ADAPTERS[@]}"; do printf '%s %s; ' "$a" "${UPSTREAM[$a]}"; done)"
 
 # The cases: id | feature | client operations | client features | server features.
 # "logix" in the server column means: logixTags, and tagList as well when
@@ -103,13 +105,23 @@ why_not() {
 }
 
 # Known incompatibilities between reference stacks: "client<TAB>server<TAB>case<TAB>reason"
-# lines of scripts/selftest-known.tsv. A listed case that fails is recorded
+# lines of scripts/selftest-known.tsv, and known bugs of the upstream versions
+# under test (candidate builds): "adapter<TAB>version<TAB>client<TAB>server<TAB>case<TAB>reason"
+# lines of scripts/known-bugs.tsv. A listed case that fails is recorded
 # "known" with the reason and does not fail the self-test; one that passes is
 # recorded "pass" with a note to remove the entry.
 KNOWN="${SCRIPT_DIR}/selftest-known.tsv"
+KNOWN_BUGS="${SCRIPT_DIR}/known-bugs.tsv"
 known_reason() {
-    [[ -f "${KNOWN}" ]] || return 0
-    awk -F'\t' -v c="$1" -v s="$2" -v k="$3" '!/^#/ && $1 == c && $2 == s && $3 == k {print $4; exit}' "${KNOWN}"
+    local reason=""
+    [[ -f "${KNOWN}" ]] && reason=$(awk -F'\t' -v c="$1" -v s="$2" -v k="$3" '!/^#/ && $1 == c && $2 == s && $3 == k {print $4; exit}' "${KNOWN}")
+    [[ -z "${reason}" && -f "${KNOWN_BUGS}" ]] && reason=$(awk -F'\t' -v c="$1" -v s="$2" -v k="$3" \
+        -v cv="${UPSTREAM[$1]}" -v sv="${UPSTREAM[$2]}" '
+        !/^#/ && NF >= 6 && (($1 == c && $2 == cv) || ($1 == s && $2 == sv)) \
+            && ($3 == "*" || $3 == c) && ($4 == "*" || $4 == s) && ($5 == "*" || $5 == k) {
+            printf "known bug of %s %s: %s\n", $1, $2, $6; exit
+        }' "${KNOWN_BUGS}")
+    [[ -z "${reason}" ]] || echo "${reason}"
 }
 
 # op <args...>: runs one client operation of CLIENT against HOST, keeps the
@@ -304,7 +316,7 @@ for SERVER in "${SERVERS[@]}"; do
             known=$(known_reason "${CLIENT}" "${SERVER}" "${CASE}")
             case ${rc} in
             0) ok "${CLIENT} -> ${SERVER}: ${CASE}"; outcome=pass
-               [[ -n "${known}" ]] && { NOTE="listed in selftest-known.tsv but passed: remove the entry; ${NOTE}"; log "${CLIENT} -> ${SERVER}: ${CASE} passed although listed as known"; } ;;
+               [[ -n "${known}" ]] && { NOTE="listed in selftest-known.tsv or known-bugs.tsv but passed: remove the entry; ${NOTE}"; log "${CLIENT} -> ${SERVER}: ${CASE} passed although listed as known"; } ;;
             2) NA=$((NA + 1)); outcome=n/a ;;
             *) if [[ -n "${known}" ]]; then
                    KNOWN_N=$((KNOWN_N + 1)); outcome=known; NOTE="${known} (${NOTE})"
@@ -324,7 +336,7 @@ done
     echo
     echo "Images: $(for a in "${ADAPTERS[@]}"; do printf '%s ' "$(image_of "$a")"; done)"
     echo
-    echo "pass: the case passed; fail: it failed; known: a known incompatibility between the two reference stacks (scripts/selftest-known.tsv, reason in the notes); n/a: one side does not declare what the case needs."
+    echo "pass: the case passed; fail: it failed; known: a known incompatibility between the two reference stacks (scripts/selftest-known.tsv) or a known bug of a candidate upstream version (scripts/known-bugs.tsv), reason in the notes; n/a: one side does not declare what the case needs."
     for s in "${SERVERS[@]}"; do
         echo
         echo "## Server ${s}"

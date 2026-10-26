@@ -34,6 +34,48 @@ The pins live in the Dockerfiles, the Python adapters' `requirements.txt` and
 [versions.yaml](../versions.yaml); `scripts/check-versions.sh` keeps them in
 step.
 
+### Upstream candidates
+
+The **Upstream candidates** workflow (`.github/workflows/candidate.yml`)
+checks every week, and on demand, whether each pin is still the latest
+upstream (`scripts/latest-upstream.py <adapter>`):
+
+- **Release pins** (libplctag, gologix, cpppo, pycomm3, pylogix, nodeeip) are
+  compared with the newest release: git tags of libplctag/libplctag, PyPI, npm
+  (`ethernet-ip`). Every gologix tag is a pre-release (`v0.44.0-beta`), so
+  its newest tag counts as its latest.
+- **Default-branch pins** (opener, eipscanner, etherip, eiprs, eeip,
+  lokieip) are compared with the head of the default branch: the pin is behind
+  when its commit is not the head. The head gets a label of the same form as
+  the pin (`git describe` from the newest tag, rseip's crate version, EEIP.NET's
+  assembly version plus the commit, a Go pseudo-version), and the newest
+  release tag, where there is one, is reported beside it.
+
+Where a pin is behind, the adapter is built on the latest upstream as a
+candidate (`make candidate-<adapter> CANDIDATE_VERSION=<latest>
+CANDIDATE_SHA=<commit>`) and tested like a release: smoke test, then the
+cross-stack self-test against the other stacks at their pins. Every
+Dockerfile takes the upstream as `UPSTREAM_VERSION` and `UPSTREAM_SHA`; at
+the pin the release build is unchanged (archive SHA-256, `pip
+--require-hashes`, `npm ci` with the lock file, `cargo --locked`, `go mod
+verify`), any other value takes a candidate path that has no recorded hash
+to check and says `candidate build: ...` on stderr. Known bugs of a
+candidate's upstream version go in
+[scripts/known-bugs.tsv](../scripts/known-bugs.tsv): a listed case that
+fails is recorded as known, so one upstream bug does not hide whether
+everything else works.
+
+The decision table (stack, where it was looked up, pin, latest, candidate
+self-test, update?) is in the run's Job Summary, and an issue "Upstream
+releases: pins behind the latest" is opened or updated while any pin is
+behind, and closed once none is. Nothing is bumped automatically. To bump:
+move `UPSTREAM_VERSION` and `UPSTREAM_SHA` in every stage of the
+Dockerfile, with the hash of what is fetched (`UPSTREAM_SHA256`, or
+`requirements.txt`, `package-lock.json`, `go.mod`/`go.sum`, `Cargo.lock`),
+the static `capabilities.json` of opener and libplctag, and
+`versions.yaml`; `make validate` checks that they agree. Then `make ci`,
+and record the change in this file and in `RELEASE.md`.
+
 ## Cross-stack matrix
 
 `make selftest` (`scripts/selftest.sh`) starts each server image (opener,

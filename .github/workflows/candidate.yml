@@ -1,0 +1,234 @@
+name: Upstream candidates
+run-name: "Candidate upstream probe by @${{ github.actor }}"
+
+# Resolves the latest upstream of every stack (scripts/latest-upstream.py),
+# builds a candidate image where the pin is behind, runs the self-tests on it
+# and publishes a pin-vs-latest decision table in the workflow Job Summary.
+# When a pin is behind, an issue is opened (or the open one updated) with that
+# table; it is closed once every pin is the latest upstream again. Release
+# pins (Dockerfiles, lock files, versions.yaml) are never mutated.
+#
+# Six stacks are pinned to a release (the latest is the newest release) and
+# six to a default-branch commit, because upstream has no recent release (the
+# latest is the head of the default branch).
+#
+# A candidate is tested like a release: smoke test plus the cross-stack
+# self-test against the pinned other stacks. Bugs of a specific upstream
+# version listed in scripts/known-bugs.tsv are reported as known rather than
+# as failures, so one upstream bug does not hide whether everything else works.
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Nothing is pulled from Docker Hub: anonymous pulls are rate limited per
+  # runner address and its token service times out under load. Base images
+  # (pinned by digest) and build tooling come from Google's mirror of it, and
+  # every registry operation is retried on transient failures (scripts/retry.sh).
+  BASE_REGISTRY: mirror.gcr.io/library
+  TOOLS_REGISTRY: mirror.gcr.io
+
+jobs:
+  candidate:
+    name: ${{ matrix.adapter }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        adapter: [opener, eipscanner, cpppo, pycomm3, libplctag, gologix, pylogix, etherip, eiprs, nodeeip, eeip, lokieip]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install jsonschema
+
+      - name: Resolve the pin against upstream
+        id: resolve
+        run: |
+          set -o pipefail
+          scripts/latest-upstream.py "${{ matrix.adapter }}" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Build the pinned images
+        if: steps.resolve.outputs.update == 'yes'
+        run: make -j4 --output-sync=target images
+
+      - name: Build and self-test at the latest upstream
+        id: test
+        if: steps.resolve.outputs.update == 'yes'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          make "candidate-${{ matrix.adapter }}" \
+            CANDIDATE_VERSION="${{ steps.resolve.outputs.latest }}" \
+            CANDIDATE_SHA="${{ steps.resolve.outputs.latest_sha }}" 2>&1 | tee selftest.log
+          echo "result=$(grep -E '^\[selftest\] [0-9]+ passed' selftest.log | tail -1 | sed 's/^\[selftest\] //')" >> "$GITHUB_OUTPUT"
+
+      - name: Known bugs of the latest upstream
+        id: known
+        run: |
+          known=$(awk -F'\t' -v a="${{ matrix.adapter }}" -v v="${{ steps.resolve.outputs.latest }}" \
+            '!/^#/ && $1 == a && $2 == v { printf "%s%s", sep, $6; sep = "; " }' scripts/known-bugs.tsv)
+          echo "known=${known}" >> "$GITHUB_OUTPUT"
+
+      - name: Write the table row
+        if: always()
+        env:
+          PIN: ${{ steps.resolve.outputs.pin }}
+          PIN_SHA: ${{ steps.resolve.outputs.pin_sha }}
+          LATEST: ${{ steps.resolve.outputs.latest }}
+          LATEST_SHA: ${{ steps.resolve.outputs.latest_sha }}
+          SOURCE: ${{ steps.resolve.outputs.source }}
+          NOTE: ${{ steps.resolve.outputs.note }}
+          UPDATE: ${{ steps.resolve.outputs.update }}
+          OUTCOME: ${{ steps.test.outcome }}
+          RESULT: ${{ steps.test.outputs.result }}
+          KNOWN: ${{ steps.known.outputs.known }}
+        run: |
+          case "${OUTCOME}" in
+            ""|skipped) tested=$([[ "${UPDATE}" == "no" ]] && echo "same as pin" || echo "not run") ;;
+            *) tested="\`${OUTCOME}\`${RESULT:+<br>${RESULT}}" ;;
+          esac
+          notes="${NOTE}${KNOWN:+${NOTE:+<br>}known bugs: ${KNOWN}}"
+          # The backticks are Markdown code marks, not command substitutions.
+          # shellcheck disable=SC2016
+          printf '| %s | %s | `%s`<br>`%s` | `%s`<br>`%s` | %s | **%s** | %s |\n' \
+            "${{ matrix.adapter }}" "${SOURCE:-?}" "${PIN:-?}" "${PIN_SHA:0:7}" "${LATEST:-?}" "${LATEST_SHA:0:7}" \
+            "${tested}" "${UPDATE:-?}" "${notes}" > "row-${{ matrix.adapter }}.md"
+
+      - name: Upload the row and the self-test log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: candidate-${{ matrix.adapter }}
+          path: |
+            row-${{ matrix.adapter }}.md
+            selftest.log
+            reports/candidate/selftest/summary.md
+          if-no-files-found: ignore
+
+  summary:
+    name: Decision table
+    runs-on: ubuntu-latest
+    needs: candidate
+    if: always()
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      ISSUE_TITLE: "Upstream releases: pins behind the latest"
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      ADAPTER_COUNT: "12"
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: candidate-*
+          merge-multiple: true
+
+      - name: Write pin-vs-latest summary
+        id: table
+        run: |
+          {
+            echo "| Stack | Looked up in | Release pin | Latest upstream | Candidate self-test | Update? | Notes |"
+            echo "|---|---|---|---|---|---|---|"
+            cat row-*.md 2>/dev/null || echo "| no rows: every candidate job failed before resolving | | | | | | |"
+          } > table.md
+          # A row exists for every adapter whose job got as far as writing one;
+          # a row without a pin means the lookup itself failed.
+          rows=$(cat row-*.md 2>/dev/null | grep -c '^| ' || true)
+          resolved=$(cat row-*.md 2>/dev/null | grep -cE '\| \*\*(yes|no)\*\* \|' || true)
+          behind=$(cat row-*.md 2>/dev/null | grep -cF '| **yes** |' || true)
+          echo "behind=${behind}" >> "$GITHUB_OUTPUT"
+          echo "complete=$([[ "${rows}" -eq "${ADAPTER_COUNT}" && "${resolved}" -eq "${ADAPTER_COUNT}" ]] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Upstream candidate report"
+            echo
+            echo "Release pins were **not** modified. Use this table to decide whether to bump."
+            echo
+            cat table.md
+            echo
+            echo "### Pin locations"
+            echo
+            echo "Every adapter pins its upstream as \`ARG UPSTREAM_VERSION\` and \`ARG UPSTREAM_SHA\` (the commit)"
+            echo "in \`adapters/<name>/Dockerfile\`, mirrored in \`versions.yaml\`; \`scripts/check-versions.sh\` checks"
+            echo "that they agree. The hash of what is fetched moves with them: \`UPSTREAM_SHA256\` (source archive),"
+            echo "\`requirements.txt\`, \`package-lock.json\`, \`go.mod\`/\`go.sum\`, \`Cargo.lock\`, and the static"
+            echo "\`capabilities.json\` of opener and libplctag."
+            echo
+            echo "### How to read this"
+            echo
+            echo "- **Looked up in**: a release pin is compared with the newest release (git tags, PyPI, npm);"
+            echo "  a default-branch pin (opener, eipscanner, etherip, eiprs, eeip, lokieip) with the head of the branch."
+            echo "- **Update? = yes** means the pin is not the latest upstream."
+            echo "- **Candidate self-test** builds the adapter on that upstream and runs the smoke test and the"
+            echo "  cross-stack self-test against the pinned other stacks. \`success\`: the pin can move."
+            echo "  \`failure\`: read the uploaded log before bumping."
+            echo "- A case listed as known in \`scripts/known-bugs.tsv\` that passes is noted in the self-test summary:"
+            echo "  the upstream bug is fixed. Remove the entry and move the pin."
+            echo "- Bump deliberately, after reading the upstream changelog, and record the change in"
+            echo "  \`docs/COMPATIBILITY.md\` and \`RELEASE.md\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Find the open tracking issue
+        id: issue
+        run: |
+          number="$(gh issue list --state open --search "\"${ISSUE_TITLE}\" in:title" --json number,title \
+            --jq "[.[] | select(.title == env.ISSUE_TITLE)][0].number // empty")"
+          echo "number=${number}" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update the tracking issue
+        if: steps.table.outputs.behind != '0'
+        env:
+          ISSUE_NUMBER: ${{ steps.issue.outputs.number }}
+        run: |
+          {
+            echo "The weekly probe found upstreams newer than the pins of this repository."
+            echo
+            cat table.md
+            echo
+            echo "## How to read this"
+            echo
+            echo "- **Update? = yes**: the pin is not the latest upstream (the newest release, or the head of"
+            echo "  the default branch for a stack pinned to a commit)."
+            echo "- **Candidate self-test** is the smoke test plus the cross-stack self-test of the adapter built"
+            echo "  on the latest upstream, against the other stacks at their pins. \`success\`: the pin can move."
+            echo "  \`failure\`: read the self-test log in the [workflow run](${RUN_URL}) first."
+            echo
+            echo "## To update"
+            echo
+            echo '```sh'
+            echo "scripts/latest-upstream.py <adapter>          # latest and latest_sha"
+            echo "make images                                   # the pinned images"
+            echo "make candidate-<adapter> CANDIDATE_VERSION=<latest> CANDIDATE_SHA=<latest_sha>"
+            echo '```'
+            echo
+            echo "Then move \`ARG UPSTREAM_VERSION\` and \`ARG UPSTREAM_SHA\` in \`adapters/<adapter>/Dockerfile\`"
+            echo "with the hash of what is fetched (\`UPSTREAM_SHA256\` or the lock file), \`versions.yaml\` and,"
+            echo "for opener and libplctag, \`capabilities.json\`; \`make validate\` checks that they agree. Record"
+            echo "the change in \`docs/COMPATIBILITY.md\` and \`RELEASE.md\`. An upstream that fails the self-tests"
+            echo "stays a candidate: list its bug in \`scripts/known-bugs.tsv\`."
+            echo
+            echo "_Last checked by [this workflow run](${RUN_URL}). This issue is updated by the weekly"
+            echo "probe and closed automatically once every pin is the latest upstream._"
+          } > body.md
+          if [ -n "${ISSUE_NUMBER}" ]; then
+            gh issue edit "${ISSUE_NUMBER}" --body-file body.md
+            echo "Updated issue #${ISSUE_NUMBER}."
+          else
+            gh issue create --title "${ISSUE_TITLE}" --body-file body.md
+          fi
+
+      - name: Close the tracking issue when every pin is the latest
+        if: steps.table.outputs.behind == '0' && steps.table.outputs.complete == 'yes' && steps.issue.outputs.number != ''
+        env:
+          ISSUE_NUMBER: ${{ steps.issue.outputs.number }}
+        run: gh issue close "${ISSUE_NUMBER}" --comment "Every pin is the latest upstream again."

@@ -24,8 +24,19 @@ ARG UPSTREAM_VERSION=0.0.0-20221229063210-535f797
 ENV CGO_ENABLED=0 GOFLAGS=-mod=readonly GOTOOLCHAIN=local GOWORK=off
 WORKDIR /src/adapter
 COPY adapters/lokieip/go.mod adapters/lokieip/go.sum ./
-# The pinned pseudo-version: v<UPSTREAM_VERSION without its short hash>-<12 hex of UPSTREAM_SHA>.
-RUN go mod download && go mod verify \
+# The release build downloads what go.sum pins and verifies it. A candidate
+# build ("make candidate-lokieip") overrides UPSTREAM_SHA (and UPSTREAM_VERSION):
+# go get moves go.mod and go.sum to that commit (checked against the Go
+# checksum database, as every module download is), which it says on stderr.
+# Either way the module's pseudo-version must be
+# v<UPSTREAM_VERSION without its short hash>-<12 hex of UPSTREAM_SHA>.
+RUN pinned="$(sed -nE 's/^require github.com\/loki-os\/go-ethernet-ip v.*-([0-9a-f]{12})$/\1/p' go.mod)" \
+    && test -n "${pinned}" \
+    && if [ "$(printf '%s' "${UPSTREAM_SHA}" | cut -c1-12)" != "${pinned}" ]; then \
+         echo "candidate build: go-ethernet-ip ${UPSTREAM_SHA} instead of the pin ${pinned}, go.sum updated by go get" >&2 \
+         && GOFLAGS= go get "github.com/loki-os/go-ethernet-ip@${UPSTREAM_SHA}"; \
+       fi \
+    && go mod download && go mod verify \
     && want="v${UPSTREAM_VERSION%-*}-$(printf '%s' "${UPSTREAM_SHA}" | cut -c1-12)" \
     && got="$(go list -m -f '{{.Version}}' github.com/loki-os/go-ethernet-ip)" \
     && echo "go-ethernet-ip ${got}" && test "${got}" = "${want}" \

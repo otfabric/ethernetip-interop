@@ -1,0 +1,20 @@
+# Known bugs of specific upstream versions, for candidate builds
+# ("make candidate-<adapter>", the Upstream candidates workflow).
+#
+# A released pin has no entry here: a pin's incompatibilities are in
+# selftest-known.tsv. An entry names an upstream version that is built as a
+# candidate, so that one upstream bug is reported as such instead of hiding
+# whether everything else works.
+#
+# Columns, separated by tabs:
+#   1  adapter
+#   2  upstream version, as print-capabilities reports it (.upstream.version)
+#   3  client, or * for any
+#   4  server, or * for any
+#   5  self-test case (scripts/selftest.sh CASES), or * for any
+#   6  what is wrong
+#
+# The adapter must be the client or the server of the pairing, at that
+# version. A matching case that fails is recorded "known" and does not fail
+# the self-test; one that passes is recorded "pass" with a note to remove the
+# entry: the bug is fixed and the pin can move.
