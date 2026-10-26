@@ -97,6 +97,8 @@ jobs:
             *) tested="\`${OUTCOME}\`${RESULT:+<br>${RESULT}}" ;;
           esac
           notes="${NOTE}${KNOWN:+${NOTE:+<br>}known bugs: ${KNOWN}}"
+          # The backticks are Markdown code marks, not command substitutions.
+          # shellcheck disable=SC2016
           printf '| %s | %s | `%s`<br>`%s` | `%s`<br>`%s` | %s | **%s** | %s |\n' \
             "${{ matrix.adapter }}" "${SOURCE:-?}" "${PIN:-?}" "${PIN_SHA:0:7}" "${LATEST:-?}" "${LATEST_SHA:0:7}" \
             "${tested}" "${UPDATE:-?}" "${notes}" > "row-${{ matrix.adapter }}.md"
