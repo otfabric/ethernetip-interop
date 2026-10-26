@@ -4,7 +4,7 @@
 # Cross-stack self-test: every client image against every server image, on a
 # private Docker network, for the operations both declare.
 #
-# Usage: selftest.sh [adapter ...]     default: opener eipscanner cpppo pycomm3
+# Usage: selftest.sh [adapter ...]     default: the Makefile's ADAPTERS
 #
 # Each server serves its first fixture (print-capabilities .fixtures[0]); the
 # expected values come from that fixture in this repository. A case runs
@@ -26,7 +26,7 @@ ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${SCRIPT_DIR}/lib.sh"
 
 ADAPTERS=("$@")
-[[ ${#ADAPTERS[@]} -gt 0 ]] || ADAPTERS=(opener eipscanner cpppo pycomm3)
+[[ ${#ADAPTERS[@]} -gt 0 ]] || read -r -a ADAPTERS <<<"$(make -s -C "${ROOT}" print-adapters)"
 require_tools
 OUT="${REPORT_DIR:-${ROOT}/reports}/selftest"
 rm -rf "${OUT}" && mkdir -p "${OUT}"
@@ -57,8 +57,8 @@ CASES=(
     "get-attributes-all|Get_Attributes_All (Identity)|get-attributes-all|getAttributesAll|getAttributesAll"
     "set-attribute|Set_Attribute_Single (assembly data)|set-attribute get-attribute|setAttributeSingle getAttributeSingle|setAttributeSingle getAttributeSingle"
     "error-status|Error status (unknown attribute)|get-attribute|getAttributeSingle|getAttributeSingle"
-    "multiple-get|Multiple Service Packet|multiple-get|multipleService|multipleService"
-    "class3|Class 3 connected explicit messaging|get-attribute|class3|class3"
+    "multiple-get|Multiple Service Packet|multiple-get|multipleService|multipleService getAttributeSingle"
+    "class3|Class 3 connected explicit messaging|get-attribute|class3|class3 getAttributeSingle"
     "identity|identity operation|identity||identity"
     "io-exclusive-owner|Class 1 I/O, exclusive owner|io|class1|class1"
     "io-large|Class 1 I/O, Large_Forward_Open|io|class1 largeForwardOpen|class1 largeForwardOpen"
@@ -90,6 +90,8 @@ why_not() {
         identity)
             # pycomm3's identity is get_module_info: Unconnected_Send to slot 0;
             # EIPScanner's is Get_Attributes_All of the Identity object.
+            # Either way the Identity object answers Get_Attributes_All.
+            has_feature "$s" getAttributesAll server || { echo "${s} (server) lacks getAttributesAll"; return; }
             if has_feature "$c" unconnectedSend client; then
                 has_feature "$s" unconnectedSend server || { echo "${c} routes it (Unconnected_Send); ${s} (server) lacks unconnectedSend"; return; }
             else
@@ -98,6 +100,16 @@ why_not() {
         *) has_feature "$s" "$f" server || { echo "${s} (server) lacks ${f}"; return; } ;;
         esac
     done
+}
+
+# Known incompatibilities between reference stacks: "client<TAB>server<TAB>case<TAB>reason"
+# lines of scripts/selftest-known.tsv. A listed case that fails is recorded
+# "known" with the reason and does not fail the self-test; one that passes is
+# recorded "pass" with a note to remove the entry.
+KNOWN="${SCRIPT_DIR}/selftest-known.tsv"
+known_reason() {
+    [[ -f "${KNOWN}" ]] || return 0
+    awk -F'\t' -v c="$1" -v s="$2" -v k="$3" '!/^#/ && $1 == c && $2 == s && $3 == k {print $4; exit}' "${KNOWN}"
 }
 
 # op <args...>: runs one client operation of CLIENT against HOST, keeps the
@@ -186,9 +198,11 @@ run_case() {
         expect ".ok and .status == 0 and .data == \"${name_hex}\"" ;;
     identity)
         op identity
+        # The name, and the product code where the document has one
+        # (node-ethernet-ip's module has neither code nor vendor).
         expect '.ok and ((.identity // {}) as $i | (.module // {}) as $m
-            | ($i.productName // $m.product_name) == $fx.identity.productName
-            and ($i.productCode // $m.product_code) == $fx.identity.productCode)' ;;
+            | ($i.productName // $m.product_name // $m.name) == $fx.identity.productName
+            and (($i.productCode // $m.product_code) | . == null or . == $fx.identity.productCode))' ;;
     io-exclusive-owner | io-large)
         [[ -n "${out_inst}" && -n "${in_inst}" ]] || { NOTE="the fixture has no output or input assembly"; return 2; }
         # Not the pattern set-attribute left in the assembly: the echo must
@@ -276,10 +290,27 @@ for SERVER in "${SERVERS[@]}"; do
                 continue
             fi
             run_case "${CASE}"
-            case $? in
-            0) ok "${CLIENT} -> ${SERVER}: ${CASE}"; outcome=pass ;;
+            rc=$?
+            # A server the case brought down is restarted, so that the next
+            # clients are not blamed for it; the case fails with the crash.
+            if [[ "$(docker inspect --format '{{.State.Running}}' "${name}" 2>/dev/null)" != true ]]; then
+                NOTE="the server stopped during the case (exit $(docker inspect --format '{{.State.ExitCode}}' "${name}" 2>/dev/null || echo '?')); ${NOTE}"
+                rc=1
+                stop_server "${name}"
+                name=$(start_server "${SERVER}")
+                wait_ready "${name}" || { fail "${SERVER} did not become ready again"; break 2; }
+                HOST=$(ip_of "${name}")
+            fi
+            known=$(known_reason "${CLIENT}" "${SERVER}" "${CASE}")
+            case ${rc} in
+            0) ok "${CLIENT} -> ${SERVER}: ${CASE}"; outcome=pass
+               [[ -n "${known}" ]] && { NOTE="listed in selftest-known.tsv but passed: remove the entry; ${NOTE}"; log "${CLIENT} -> ${SERVER}: ${CASE} passed although listed as known"; } ;;
             2) NA=$((NA + 1)); outcome=n/a ;;
-            *) fail "${CLIENT} -> ${SERVER}: ${CASE}: ${NOTE}"; outcome=fail ;;
+            *) if [[ -n "${known}" ]]; then
+                   KNOWN_N=$((KNOWN_N + 1)); outcome=known; NOTE="${known} (${NOTE})"
+               else
+                   fail "${CLIENT} -> ${SERVER}: ${CASE}: ${NOTE}"; outcome=fail
+               fi ;;
             esac
             printf '%s\t%s\t%s\t%s\t%s\t%s\n' "${CLIENT}" "${SERVER}" "${CASE}" "${feature}" "${outcome}" "${NOTE}" >> "${SUMMARY}"
         done
@@ -287,28 +318,30 @@ for SERVER in "${SERVERS[@]}"; do
     stop_server "${name}"
 done
 
-# ---- the matrix: a row per case, a column per client -> server pairing ----
+# ---- the matrix: per server, a row per case, a column per client ----
 {
     echo "# Cross-stack self-test"
     echo
     echo "Images: $(for a in "${ADAPTERS[@]}"; do printf '%s ' "$(image_of "$a")"; done)"
     echo
-    printf '| Case |'
-    for s in "${SERVERS[@]}"; do for c in "${CLIENTS[@]}"; do printf ' %s → %s |' "$c" "$s"; done; done
-    echo
-    printf '|------|'
-    for s in "${SERVERS[@]}"; do for c in "${CLIENTS[@]}"; do printf ':-:|'; done; done
-    echo
-    for c in "${CASES[@]}"; do
-        IFS='|' read -r id feature _ <<<"${c}"
-        printf '| %s |' "${feature}"
-        for s in "${SERVERS[@]}"; do for cl in "${CLIENTS[@]}"; do
-            printf ' %s |' "$(awk -F'\t' -v c="${cl}" -v s="${s}" -v i="${id}" '$1 == c && $2 == s && $3 == i {print $5}' "${SUMMARY}")"
-        done; done
+    echo "pass: the case passed; fail: it failed; known: a known incompatibility between the two reference stacks (scripts/selftest-known.tsv, reason in the notes); n/a: one side does not declare what the case needs."
+    for s in "${SERVERS[@]}"; do
         echo
+        echo "## Server ${s}"
+        echo
+        printf '| Case |'; for c in "${CLIENTS[@]}"; do printf ' %s |' "$c"; done; echo
+        printf '|------|'; for c in "${CLIENTS[@]}"; do printf ':-:|'; done; echo
+        for c in "${CASES[@]}"; do
+            IFS='|' read -r id feature _ <<<"${c}"
+            printf '| %s |' "${feature}"
+            for cl in "${CLIENTS[@]}"; do
+                printf ' %s |' "$(awk -F'\t' -v c="${cl}" -v s="${s}" -v i="${id}" '$1 == c && $2 == s && $3 == i {print $5}' "${SUMMARY}")"
+            done
+            echo
+        done
     done
     echo
-    echo "Notes (n/a reasons and observed values):"
+    echo "Notes (n/a reasons, known incompatibilities and observed values):"
     echo
     awk -F'\t' 'NR > 1 && $6 != "" {printf "- %s → %s, %s: %s (%s)\n", $1, $2, $3, $6, $5}' "${SUMMARY}"
 } > "${OUT}/summary.md"

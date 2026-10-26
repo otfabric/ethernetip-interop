@@ -64,7 +64,7 @@ jobs:
   selftest:
     name: Build, smoke, cross-stack (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 45
+    timeout-minutes: 120
     needs: validate
     strategy:
       fail-fast: false

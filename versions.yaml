@@ -4,7 +4,7 @@
 # requirements.txt of the Python adapters are the source of truth for a
 # build: scripts/check-versions.sh fails when this file disagrees with them.
 
-interop_version: "0.2.0"
+interop_version: "0.3.0"
 contract_version: "1.0"        # docs/CONTAINER_CONTRACT.md; documents carry schemaVersion "1.0", the compatible line
 fixture_schema: "1.0"          # fixtures/schema/ethernetip-fixture.schema.json
 
@@ -83,16 +83,161 @@ implementations:
     published: true
     note: "Generic CIP and Rockwell Logix originator (CIPDriver, LogixDriver); no implicit messaging."
 
+
+  libplctag:
+    priority: P1
+    status: implemented
+    upstream: "libplctag"
+    repository: "https://github.com/libplctag/libplctag"
+    version: "2.7.2"             # release tag v2.7.2
+    revision: "7712ed7f1ee05ba0ebfca641b3f5c43da52a66ed"   # tag commit
+    source_sha256: "ed1f7869fa266df1bc266b9d135cd09d53dc392e557edb9986b2e172c84eb752"   # GitHub archive of the commit
+    license: "MPL-2.0 OR LGPL-2.0-or-later"
+    language: "C"
+    independent_engine: true
+    roles: [server, client]
+    published: true
+    note: >-
+      Logix tag and generic CIP originator (libplctag, linked statically, used
+      under MPL-2.0) and libplctag's ab_server PLC simulator serving the logix
+      fixture's tags. ab_server has no ListIdentity, no Identity/Assembly
+      objects, no tag list and no Read-Modify-Write.
+
+  gologix:
+    priority: P1
+    status: implemented
+    upstream: "gologix"
+    repository: "https://github.com/danomagnum/gologix"
+    module: "github.com/danomagnum/gologix"
+    version: "0.44.0-beta"         # tag v0.44.0-beta (Go module version)
+    revision: "647a0b87b756d42e37ac0f65c5762dc89036152c"   # tag commit
+    source_sha256: "43a73e8d886e647f8edfbcbc3ce73b9209ac151a17a351effac10353bb4fc76f"   # GitHub archive of the commit
+    module_sum: "h1:QrkDcR4ZFmtZ2lhWpdiE+8025nTwO4BulJkPZV+wsp8="   # go.sum, verified at build
+    license: "MIT"
+    language: "Go"
+    independent_engine: true
+    roles: [server, client]
+    published: true
+    dependencies:
+      crc16: "github.com/npat-efault/crc16 v0.0.0-20161013170008-4128ccbe47c3 h1:LreEMrgwmSTNPbtao3jPZjwrjRYrlYTDg0kTMPOgSHg= (BSD-2-Clause)"
+    note: >-
+      Logix tag server (Class 3, Unconnected_Send) with Class 1 I/O, and a
+      Class 3 originator: every client request goes over a Forward_Open
+      connection; no UDP, no unconnected messaging, no templates.
+
+  pylogix:
+    priority: P1
+    status: implemented
+    upstream: "pylogix"
+    repository: "https://github.com/dmroeder/pylogix"
+    package: "pylogix"
+    version: "1.1.6"            # PyPI wheel
+    revision: "193b6c7b0c601619223ee53587abd821d3b344c1"
+    wheel_sha256: "f181ff0990468c2e7fe0985be190c0bfe9c0d54dc4bb3f28f5a6d76b92cf980f"
+    license: "Apache-2.0"
+    language: "Python"
+    independent_engine: true
+    roles: [client]
+    published: true
+    note: "Rockwell Logix originator (PLC: Read/Write, GetTagList, Message, Discover, GetModuleProperties); generic messages unconnected only; no implicit messaging."
+
+  etherip:
+    priority: P1
+    status: implemented
+    upstream: "etherip"
+    repository: "https://github.com/ornl-epics/etherip"
+    version: "1.0-67"            # main, 67 commits after tag V1.0 (pom 1.0.0, EtherNetIP.version "1.4")
+    revision: "ce0688ae51be5652ec200fbe389667b36a638323"
+    source_sha256: "35ad2cbb710be5bef6cae0b2441a9397534249ddb33e9ac4e1e377b2e6546c7e"   # GitHub archive of the commit
+    license: "EPL-1.0"
+    language: "Java"
+    independent_engine: true
+    roles: [client]
+    published: true
+    note: >-
+      The EPICS EtherNet/IP client: generic Get_Attribute_Single/All, ListIdentity,
+      ListServices and Logix Read/Write Tag through Unconnected_Send to a backplane
+      slot; no Set_Attribute, no Class 3 or Class 1 connections, no fragmented
+      services, no tag list. The adapter (MIT) is compiled against the jar.
+
+  eiprs:
+    priority: P2
+    status: implemented
+    upstream: "rseip (eip-rs)"
+    repository: "https://github.com/Joylei/eip-rs"
+    package: "rseip"
+    version: "0.3.1-2"           # main, crate 0.3.1 (untagged bump 4a305357) + 2 commits; git describe v0.3.0-6-g16e2236
+    revision: "16e2236afb65acc9c82ebdcfbdcbba72e93b3887"
+    source_sha256: "92cccb84822056e23ab93a2d200f11ebf7a3c6813648eaf081d653d2961da77b"   # GitHub archive of the commit
+    license: "MIT"
+    language: "Rust"
+    independent_engine: true
+    roles: [client]
+    published: true
+    note: >-
+      Generic CIP and Rockwell Logix originator (EipClient/EipConnection,
+      AbEipClient/AbEipConnection): unconnected, routed (Unconnected_Send) and
+      Class 3 explicit messaging; no Class 1 I/O. Built with Rust
+      1.98.1 from the commit's archive; crates.io dependencies pinned in
+      adapters/eiprs/Cargo.lock.
+
+  nodeeip:
+    priority: P2
+    status: implemented
+    upstream: "node-ethernet-ip"
+    repository: "https://github.com/cmseaton42/node-ethernet-ip"
+    package: "ethernet-ip"
+    version: "2.0.0"            # npm tarball, pinned by package-lock.json
+    revision: "4743b077abd3cc8826d511acde8f890372826e16"
+    npm_integrity: "sha512-jGxbu8ifv2qgPzaNKbyFmLaOaefrsg3aVsBWEj3BTWyGSfaVRx/MnkNJuiR/+41GzWgt/LZpYnFGJnAnjO7DCA=="
+    tarball_sha256: "e6fb1334eb7d46136f94537f8fc6e5060174fbea9cf22c0af6fa5bed7c878506"
+    license: "MIT"
+    language: "TypeScript"
+    independent_engine: true
+    roles: [client]
+    published: true
+    note: "Logix originator (PLC: Read/Write Tag, Multiple Service Packet, RMW bits, tag list, templates) and generic CIP through its message builders; no implicit messaging, no Unconnected_Send."
+
+  eeip:
+    priority: P1
+    status: implemented
+    upstream: "EEIP.NET"
+    repository: "https://github.com/rossmann-engineering/EEIP.NET"
+    version: "1.6.0"              # master (no tags); AssemblyVersion of the library
+    revision: "58b91a0c8e30227b1b97a637635d147a2a9655dc"
+    source_sha256: "8ad4f3e498b6d02b1c65b8fae498100a9f9f90d6f691423e5c80559c4eceff5b"   # GitHub archive of the commit
+    license: "MIT"
+    language: "C#"
+    independent_engine: true
+    roles: [client]
+    published: true
+    note: "Scanner: explicit messaging and Class 1 I/O as originator (also T->O multicast and listen-only); no Class 3, no configuration data, no Multiple Service Packet."
+
 base_images:
   # Digests recorded 2026-10-19 (the same as dnp3-interop); the Dockerfiles pin these by digest.
   debian_trixie_slim: "docker.io/library/debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f"
   python_3_14_8_slim_trixie: "docker.io/library/python:3.14.8-slim-trixie@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170"
+  # Recorded 2026-10-26 for the v0.3.0 adapters.
+  maven_3_9_11_temurin_21_noble: "docker.io/library/maven:3.9.11-eclipse-temurin-21-noble@sha256:6fdc855a6ed81d288ca7ca37ac6ff5e9308b612485c0801d70b25a858c83d237"
+  temurin_21_0_8_jre_noble: "docker.io/library/eclipse-temurin:21.0.8_9-jre-noble@sha256:20e7f7288e1c18eebe8f06a442c9f7183342d9b022d3b9a9677cae2b558ddddd"
+  golang_1_27_3_trixie: "docker.io/library/golang:1.27.3-trixie@sha256:fbb7ae40b62ff8afe31662df570d39b4f5052ac32b90dae8e60d7657a20a74f4"
+  rust_1_98_1_slim_trixie: "docker.io/library/rust:1.98.1-slim-trixie@sha256:4cd829461bd5c4d511c32e269da9cb8929223b666519d8004e35fc8d1d771ab7"
+  node_24_22_1_trixie_slim: "docker.io/library/node:24.22.1-trixie-slim@sha256:43b9ba1142b8dcf33fa8f922ca1be85714adc444e0586c7cf7726daaeabc1bea"
+  dotnet_sdk_10_0: "mcr.microsoft.com/dotnet/sdk:10.0@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b"
+  dotnet_runtime_10_0: "mcr.microsoft.com/dotnet/runtime:10.0@sha256:a3f9f81954b9c810af2ed18849716c8dc74a4707bd0907fdbd69be81554c0f30"
 
 images:
   opener: "ghcr.io/otfabric/ethernetip-interop-opener"
   eipscanner: "ghcr.io/otfabric/ethernetip-interop-eipscanner"
   cpppo: "ghcr.io/otfabric/ethernetip-interop-cpppo"
   pycomm3: "ghcr.io/otfabric/ethernetip-interop-pycomm3"
+  libplctag: "ghcr.io/otfabric/ethernetip-interop-libplctag"
+  gologix: "ghcr.io/otfabric/ethernetip-interop-gologix"
+  pylogix: "ghcr.io/otfabric/ethernetip-interop-pylogix"
+  etherip: "ghcr.io/otfabric/ethernetip-interop-etherip"
+  eiprs: "ghcr.io/otfabric/ethernetip-interop-eiprs"
+  nodeeip: "ghcr.io/otfabric/ethernetip-interop-nodeeip"
+  eeip: "ghcr.io/otfabric/ethernetip-interop-eeip"
 
 platforms:
   - "linux/amd64"

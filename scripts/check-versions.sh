@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: MIT
 #
 # Fails when versions.yaml disagrees with what the builds actually pin: the
-# Dockerfiles, adapters/opener/capabilities.json and the requirements.txt of
-# the Python adapters.
+# Dockerfiles, the static capability documents (adapters/*/capabilities.json)
+# and the requirements.txt of the Python adapters.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT}"
@@ -36,35 +36,43 @@ consistent() {  # consistent <Dockerfile> <ARG>
     if [[ "${n}" == 1 ]]; then echo "ok   $1: every $2 is the same"; else echo "FAIL $1: $2 differs between stages"; status=1; fi
 }
 
-for a in opener eipscanner cpppo pycomm3; do
+# Every adapter of the Makefile (ADAPTERS): its upstream version and
+# revision, the same revision in every build stage, and, where the
+# Dockerfile has them, the SHA-256 of the source archive and the digests of
+# the base images.
+read -r -a adapters <<<"$(make -s -C "${ROOT}" print-adapters)"
+for a in "${adapters[@]}"; do
     f="adapters/${a}/Dockerfile"
+    [[ -f "${f}" ]] || { echo "FAIL ${a}: no ${f}"; status=1; continue; }
     need "${a} version"  "version: \"$(arg "${f}" UPSTREAM_VERSION)\""
     need "${a} revision" "revision: \"$(arg "${f}" UPSTREAM_SHA)\""
     consistent "${f}" UPSTREAM_SHA
+    if [[ -n "$(arg "${f}" UPSTREAM_SHA256)" ]]; then
+        need "${a} source archive" "source_sha256: \"$(arg "${f}" UPSTREAM_SHA256)\""
+    fi
+    while read -r d; do
+        need "${a} base image digest" "${d}"
+    done < <(sed -nE 's/^ARG [A-Z_]+_DIGEST=(sha256:[0-9a-f]+)$/\1/p' "${f}" | sort -u)
 done
 
-# Source archives fetched from GitHub, verified by SHA-256 in the build.
-for a in opener eipscanner; do
-    f="adapters/${a}/Dockerfile"
-    need "${a} source archive" "source_sha256: \"$(arg "${f}" UPSTREAM_SHA256)\""
-    need "${a} debian digest"  "$(arg "${f}" DEBIAN_DIGEST)"
+# A static capability document (OpENer, libplctag) must name the same pin
+# as its Dockerfile.
+for a in "${adapters[@]}"; do
+    caps="adapters/${a}/capabilities.json"
+    [[ -f "${caps}" ]] || continue
+    same "${a} capabilities version"  "$(sed -nE 's/^ *"version": "([^"]+)".*/\1/p' "${caps}" | head -1)" "$(arg "adapters/${a}/Dockerfile" UPSTREAM_VERSION)"
+    same "${a} capabilities revision" "$(sed -nE 's/^ *"revision": "([^"]+)".*/\1/p' "${caps}" | head -1)" "$(arg "adapters/${a}/Dockerfile" UPSTREAM_SHA)"
 done
-
-# OpENer's capability document is static: it must name the same pin.
-caps=adapters/opener/capabilities.json
-same "opener capabilities version"  "$(sed -nE 's/^ *"version": "([^"]+)".*/\1/p' "${caps}")" "$(arg adapters/opener/Dockerfile UPSTREAM_VERSION)"
-same "opener capabilities revision" "$(sed -nE 's/^ *"revision": "([^"]+)".*/\1/p' "${caps}")" "$(arg adapters/opener/Dockerfile UPSTREAM_SHA)"
 
 # Python adapters: the Dockerfile and requirements.txt name the same version,
 # and versions.yaml records the hash pip verifies.
 req_version() { sed -nE "s/^$2==([^ ]+).*$/\1/p" "$1"; }
 req_hash() { sed -nE "s/^$2==[^ ]+ --hash=sha256:([0-9a-f]+).*$/\1/p" "$1"; }
-for a in cpppo pycomm3; do
-    f="adapters/${a}/Dockerfile"
+for a in "${adapters[@]}"; do
     r="adapters/${a}/requirements.txt"
-    same "${a} in Dockerfile and requirements.txt" "$(arg "${f}" UPSTREAM_VERSION)" "$(req_version "${r}" "${a}")"
+    [[ -f "${r}" && -n "$(req_version "${r}" "${a}")" ]] || continue
+    same "${a} in Dockerfile and requirements.txt" "$(arg "adapters/${a}/Dockerfile" UPSTREAM_VERSION)" "$(req_version "${r}" "${a}")"
     need "${a} wheel hash" "wheel_sha256: \"$(req_hash "${r}" "${a}")\""
-    need "${a} python digest" "$(arg "${f}" PYTHON_DIGEST)"
 done
 need "greenery version" "greenery: \"$(req_version adapters/cpppo/requirements.txt greenery) sdist"
 need "greenery hash"    "sha256 $(req_hash adapters/cpppo/requirements.txt greenery)"

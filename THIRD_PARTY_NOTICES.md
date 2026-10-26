@@ -13,10 +13,18 @@ to the licence texts. All four images are published.
 | `adapters/eipscanner/` (links EIPScanner) | MIT |
 | `adapters/pycomm3/` (imports pycomm3) | MIT |
 | `adapters/cpppo/` (imports cpppo) | GPL-3.0-or-later ([adapters/LICENSE](adapters/LICENSE)) |
+| `adapters/libplctag/` (links libplctag), `adapters/gologix/` (links gologix), `adapters/pylogix/`, `adapters/etherip/`, `adapters/eiprs/`, `adapters/nodeeip/`, `adapters/eeip/` | MIT |
 | Image `ethernetip-interop-opener` | MIT and the OpENer licence (adapted BSD, see below), and the licences of the Debian packages |
 | Image `ethernetip-interop-eipscanner` | MIT, and the licences of the Debian packages |
 | Image `ethernetip-interop-pycomm3` | MIT, and the Python licence |
 | Image `ethernetip-interop-cpppo` | **GPL-3.0 as a whole** (it contains cpppo and the GPL adapter), and the licences of its components |
+| Image `ethernetip-interop-libplctag` | MIT and libplctag (MPL-2.0 OR LGPL-2.0-or-later, used under MPL-2.0), and the licences of the Debian packages |
+| Image `ethernetip-interop-gologix` | MIT and crc16 (BSD-2-Clause), and the licences of the Debian packages |
+| Image `ethernetip-interop-pylogix` | MIT and pylogix (Apache-2.0), and the Python licence |
+| Image `ethernetip-interop-etherip` | MIT and etherip (EPL-1.0), and the Eclipse Temurin JRE (GPL-2.0 with the Classpath Exception) |
+| Image `ethernetip-interop-eiprs` | MIT, and the MIT/Apache-2.0 licences of the Rust crates, and the licences of the Debian packages |
+| Image `ethernetip-interop-nodeeip` | MIT, and the licences of Node.js |
+| Image `ethernetip-interop-eeip` | MIT, and the licences of the .NET runtime image |
 
 Each adapter is a separate program in a separate image; no image contains two
 implementations. Nothing in this repository is linked into a consumer: a
@@ -95,6 +103,87 @@ from PyPI, unmodified: the Python sources are in the image under
 available from PyPI and from the repositories above. The adapter's source is
 in this repository at the release tag (`adapters/cpppo/`) and in the image at
 `/opt/adapter/cpppo_interop.py`.
+
+## Image `ethernetip-interop-libplctag`
+
+| Component | Version | Licence | Source |
+|-----------|---------|---------|--------|
+| libplctag ((c) Kyle Hayes and contributors), linked statically into the adapter, and its PLC simulator `ab_server` | v2.7.2, `7712ed7f1ee05ba0ebfca641b3f5c43da52a66ed`, GitHub archive SHA-256 `ed1f7869fa266df1bc266b9d135cd09d53dc392e557edb9986b2e172c84eb752` | MPL-2.0 OR LGPL-2.0-or-later (used under MPL-2.0) | https://github.com/libplctag/libplctag |
+| Adapter | this repository, `adapters/libplctag/` | MIT | https://github.com/otfabric/ethernetip-interop |
+| Base system | Debian trixie-slim | various; see `/usr/share/doc/*/copyright` in the image | https://www.debian.org |
+
+Licences in the image: `/licenses/libplctag/LICENSE-1.MPL` (also as
+`LICENSE`) and `/licenses/libplctag/LICENSE-2.LGPL`. libplctag is built
+unmodified; its source, as MPL-2.0 requires for binary distribution, is the
+pinned GitHub archive above.
+
+## Image `ethernetip-interop-gologix`
+
+| Component | Version | Licence | Source |
+|-----------|---------|---------|--------|
+| gologix ((c) 2022 danomagnum), compiled in | v0.44.0-beta, `647a0b87b756d42e37ac0f65c5762dc89036152c` (Go module sum `h1:QrkDcR4ZFmtZ2lhWpdiE+8025nTwO4BulJkPZV+wsp8=`) | MIT | https://github.com/danomagnum/gologix |
+| crc16 ((c) 2014 Nick Patavalis), compiled in | v0.0.0-20161013170008-4128ccbe47c3 | BSD-2-Clause | https://github.com/npat-efault/crc16 |
+| Adapter | this repository, `adapters/gologix/` | MIT | https://github.com/otfabric/ethernetip-interop |
+| Base system | Debian trixie-slim | various; see `/usr/share/doc/*/copyright` in the image | https://www.debian.org |
+
+Licences in the image: `/licenses/gologix/LICENSE`, `/licenses/crc16/LICENSE`.
+
+## Image `ethernetip-interop-pylogix`
+
+| Component | Version | Licence | Source |
+|-----------|---------|---------|--------|
+| pylogix ((c) Dustin Roeder) | 1.1.6 (PyPI wheel SHA-256 `f181ff0990468c2e7fe0985be190c0bfe9c0d54dc4bb3f28f5a6d76b92cf980f`; tag commit `193b6c7b0c601619223ee53587abd821d3b344c1`), unmodified | Apache-2.0 | https://github.com/dmroeder/pylogix |
+| Python | 3.14.8 (official `python:3.14.8-slim-trixie` image) | PSF-2.0 | https://www.python.org |
+| Adapter | this repository, `adapters/pylogix/` | MIT | https://github.com/otfabric/ethernetip-interop |
+| Base system | Debian trixie-slim | various; see `/usr/share/doc/*/copyright` in the image | https://www.debian.org |
+
+Licence in the image: `/licenses/pylogix/LICENSE`.
+
+## Image `ethernetip-interop-etherip`
+
+| Component | Version | Licence | Source |
+|-----------|---------|---------|--------|
+| etherip ((c) 2012 UT-Battelle, LLC and contributors) | main `ce0688ae51be5652ec200fbe389667b36a638323` (V1.0 + 67 commits), GitHub archive SHA-256 `35ad2cbb710be5bef6cae0b2441a9397534249ddb33e9ac4e1e377b2e6546c7e`, jar built unmodified | EPL-1.0 | https://github.com/ornl-epics/etherip |
+| Eclipse Temurin JRE | 21.0.8+9 (official `eclipse-temurin:21.0.8_9-jre-noble` image) | GPL-2.0 with the Classpath Exception | https://adoptium.net |
+| Adapter | this repository, `adapters/etherip/` | MIT | https://github.com/otfabric/ethernetip-interop |
+| Base system | Ubuntu 24.04 (noble) | various; see `/usr/share/doc/*/copyright` in the image | https://ubuntu.com |
+
+Licence in the image: `/licenses/etherip/LICENSE`. The source of the etherip
+jar is the pinned archive above.
+
+## Image `ethernetip-interop-eiprs`
+
+| Component | Version | Licence | Source |
+|-----------|---------|---------|--------|
+| rseip, rseip-cip, rseip-eip, rseip-core (eip-rs, (c) 2021 Joylei), linked statically | main `16e2236afb65acc9c82ebdcfbdcbba72e93b3887` (crate 0.3.1 + 2 commits), GitHub archive SHA-256 `92cccb84822056e23ab93a2d200f11ebf7a3c6813648eaf081d653d2961da77b` | MIT | https://github.com/Joylei/eip-rs |
+| Rust crates from crates.io (tokio, bytes, futures, serde_json, smallvec, ...), linked statically | as in `adapters/eiprs/Cargo.lock` | MIT and/or Apache-2.0 | https://crates.io |
+| Adapter | this repository, `adapters/eiprs/` | MIT | https://github.com/otfabric/ethernetip-interop |
+| Base system | Debian trixie-slim | various; see `/usr/share/doc/*/copyright` in the image | https://www.debian.org |
+
+Licences in the image: `/licenses/eip-rs/LICENSE`, and the crates' licence
+files under `/licenses/crates/<crate>-<version>/`.
+
+## Image `ethernetip-interop-nodeeip`
+
+| Component | Version | Licence | Source |
+|-----------|---------|---------|--------|
+| node-ethernet-ip (npm `ethernet-ip`, (c) 2018-2026 Canaan Seaton) | 2.0.0 (npm integrity `sha512-jGxbu8ifv2qgPzaNKbyFmLaOaefrsg3aVsBWEj3BTWyGSfaVRx/MnkNJuiR/+41GzWgt/LZpYnFGJnAnjO7DCA==`; tag commit `4743b077abd3cc8826d511acde8f890372826e16`); no runtime dependencies | MIT | https://github.com/cmseaton42/node-ethernet-ip |
+| Node.js | 24.22.1 (official `node:24.22.1-trixie-slim` image) | MIT and the licences of its components | https://nodejs.org |
+| Adapter | this repository, `adapters/nodeeip/` | MIT | https://github.com/otfabric/ethernetip-interop |
+| Base system | Debian trixie-slim | various; see `/usr/share/doc/*/copyright` in the image | https://www.debian.org |
+
+Licence in the image: `/licenses/node-ethernet-ip/LICENSE`.
+
+## Image `ethernetip-interop-eeip`
+
+| Component | Version | Licence | Source |
+|-----------|---------|---------|--------|
+| EEIP.NET ((c) 2020 Rossmann Engineering), `EEIP.dll` built unchanged from the sources | master `58b91a0c8e30227b1b97a637635d147a2a9655dc` (1.6.0), GitHub archive SHA-256 `8ad4f3e498b6d02b1c65b8fae498100a9f9f90d6f691423e5c80559c4eceff5b` | MIT | https://github.com/rossmann-engineering/EEIP.NET |
+| .NET runtime | 10.0 (`mcr.microsoft.com/dotnet/runtime:10.0`) | MIT and the licences of its components | https://dot.net |
+| Adapter | this repository, `adapters/eeip/` | MIT | https://github.com/otfabric/ethernetip-interop |
+| Base system | Ubuntu 24.04 | various; see `/usr/share/doc/*/copyright` in the image | https://ubuntu.com |
+
+Licence in the image: `/licenses/eeip/LICENSE`.
 
 ## Images in general
 

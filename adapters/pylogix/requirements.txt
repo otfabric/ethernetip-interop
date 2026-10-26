@@ -1,0 +1,3 @@
+# pylogix, pinned by version and hash (also in versions.yaml). It has no
+# dependencies.
+pylogix==1.1.6 --hash=sha256:f181ff0990468c2e7fe0985be190c0bfe9c0d54dc4bb3f28f5a6d76b92cf980f

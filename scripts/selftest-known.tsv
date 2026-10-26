@@ -1,0 +1,26 @@
+# Known incompatibilities between reference stacks: client<TAB>server<TAB>case<TAB>reason.
+# A listed case that fails is recorded "known" and does not fail the self-test;
+# one that passes is reported, so that its entry is removed. Each reason is in
+# docs/CAPABILITIES.md (quirks by adapter). These are about the references only.
+libplctag	opener	get-attribute	libplctag 2.7.2 sends unconnected requests through Unconnected_Send (without the route path), which OpENer does not serve (0x08)
+libplctag	opener	get-attributes-all	libplctag 2.7.2 sends unconnected requests through Unconnected_Send (without the route path), which OpENer does not serve (0x08)
+libplctag	opener	set-attribute	libplctag 2.7.2 sends unconnected requests through Unconnected_Send (without the route path), which OpENer does not serve (0x08)
+libplctag	cpppo	class3	cpppo answers connected requests on the O->T connection ID; libplctag drops the replies and times out
+etherip	opener	list-identity-tcp	etherip sums the two octets of vendor, device type and product code instead of decoding them (product code 65001 reads 486)
+etherip	opener	list-identity-udp	etherip sums the two octets of vendor, device type and product code instead of decoding them (product code 65001 reads 486)
+etherip	opener	list-services	etherip keeps the NUL padding of the service name ("Communications..")
+etherip	cpppo	list-services	etherip keeps the NUL padding of the service name ("Communications.")
+etherip	cpppo	logix-read	etherip knows no LINT or LREAL: the fixture's Big and Ratio fail its type lookup, and with them the whole read
+etherip	libplctag	logix-read	etherip puts a transaction number in the sender context of RegisterSession; ab_server refuses a non-zero context (encapsulation status 0x0001)
+etherip	libplctag	logix-write	etherip puts a transaction number in the sender context of RegisterSession; ab_server refuses a non-zero context (encapsulation status 0x0001)
+etherip	gologix	logix-read	etherip reads several tags in a Multiple Service Packet through Unconnected_Send; gologix serves Multiple Service Packets only over Class 3 (0x08)
+nodeeip	opener	class3	node-ethernet-ip's Forward_Open path always starts with a backplane port segment; OpENer refuses it (0x01/0x0315)
+gologix	cpppo	list-services	cpppo's ListServices item is shorter than its 16-octet name field; gologix cannot parse it
+eiprs	cpppo	list-services	cpppo's ListServices item has a 15-octet name; rseip requires 16
+eipscanner	gologix	io-exclusive-owner	gologix panics on a Forward_Open with 16-bit segments, which EIPScanner sends (the server exits)
+eipscanner	gologix	io-large	gologix panics on a Forward_Open with 16-bit segments, which EIPScanner sends (the server exits)
+eipscanner	gologix	io-refused	gologix panics on a Forward_Open with 16-bit segments, which EIPScanner sends (the server exits)
+cpppo	gologix	logix-write	cpppo reads the written array with Read Tag Fragmented through Unconnected_Send, which gologix answers 0x08
+eeip	gologix	io-exclusive-owner	gologix accepts only two items in SendRRData; EEIP.NET's Forward_Open adds a socket address item, and gologix closes the connection
+eeip	gologix	io-large	gologix accepts only two items in SendRRData; EEIP.NET's Forward_Open adds a socket address item, and gologix closes the connection
+eeip	gologix	io-refused	gologix accepts only two items in SendRRData; EEIP.NET's Forward_Open adds a socket address item, and gologix closes the connection

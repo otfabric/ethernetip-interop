@@ -220,6 +220,8 @@ def main(argv):
                                values=jsonable(t.value if isinstance(t.value, list) else [t.value]))
                 elif op == "read-tags":
                     res = plc.read(*args.tags.split(","))
+                    if not isinstance(res, list):  # one tag: pycomm3 returns the Tag itself
+                        res = [res]
                     doc["results"] = [{"tag": t.tag, "values": jsonable(t.value if isinstance(t.value, list) else [t.value]),
                                        "errorText": t.error} for t in res]
                 elif op == "write-tag":

@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: MIT
+#
+# ethernetip-interop adapter for rseip (Joylei/eip-rs), client role only.
+# The rseip crates are path dependencies on the source archive of the pinned
+# commit, unpacked at /src/eip-rs by the Dockerfile; every other crate is
+# pinned with its checksum in Cargo.lock (cargo build --locked).
+
+[package]
+name = "ethernetip-interop-eiprs"
+version = "0.0.0"
+edition = "2021"
+license = "MIT"
+publish = false
+
+[[bin]]
+name = "ethernetip-interop"
+path = "src/main.rs"
+
+[dependencies]
+rseip = { path = "/src/eip-rs" }
+rseip-core = { path = "/src/eip-rs/core" }
+rseip-cip = { path = "/src/eip-rs/cip" }
+rseip-eip = { path = "/src/eip-rs/eip" }
+async-trait = "0.1"
+bytes = "1"
+futures-util = "0.3"
+serde_json = "1"
+tokio = { version = "1", features = ["rt", "net", "time", "macros"] }
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
