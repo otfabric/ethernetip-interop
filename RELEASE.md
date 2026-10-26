@@ -26,7 +26,7 @@ Tags are immutable. A fix is a new version.
 
 ## v0.5.0
 
-**Date:** not yet tagged
+**Date:** 2026-10-26
 **Previous release:** v0.4.0
 
 ## Summary
