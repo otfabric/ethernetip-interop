@@ -19,9 +19,9 @@ implementations:
     status: implemented
     upstream: "OpENer"
     repository: "https://github.com/EIPStackGroup/OpENer"
-    version: "2.3-588"           # master, git describe v2.3-588-gd8820ef; no release since v2.3
-    revision: "d8820ef41ce30dda06d213438ba81c81de33ffe2"
-    source_sha256: "6c34be6bfe294351a69544722079751f96cdc24ac1a43337dd3e22d843f5b95b"   # GitHub archive of the commit
+    version: "2.3-591"           # master, git describe v2.3-591-g0e1ab7e; no release since v2.3
+    revision: "0e1ab7ee5c272950c0dc8daf7793008d7a518912"
+    source_sha256: "5b01333bdc300c1410cf9e02d33a564320b7a6094786a047065a7ec14b21d945"   # GitHub archive of the commit
     license: "adapted BSD (OpENer license.txt), (c) Rockwell Automation; requires ODVA Terms of Usage for products"
     language: "C"
     independent_engine: true

@@ -69,7 +69,7 @@ One JSON object on one line ([schema](../schemas/capabilities.schema.json)):
 
 | | opener | eipscanner | cpppo | pycomm3 |
 |---|:-:|:-:|:-:|:-:|
-| Upstream | OpENer 2.3-588 (C) | EIPScanner 1.3.0-33 (C++) | cpppo 5.2.5 (Python) | pycomm3 1.2.16 (Python) |
+| Upstream | OpENer 2.3-591 (C) | EIPScanner 1.3.0-33 (C++) | cpppo 5.2.5 (Python) | pycomm3 1.2.16 (Python) |
 | Server (target) | yes | no | yes | no |
 | Client (originator) | no | yes | yes | yes |
 | Fixtures served | `opener-sample` | | `logix` | |

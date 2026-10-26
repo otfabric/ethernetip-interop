@@ -10,7 +10,7 @@ any library that consumes the images.
 
 | Adapter | Upstream | Pinned | Pin | Engine |
 |---------|----------|--------|-----|--------|
-| `opener` | [OpENer](https://github.com/EIPStackGroup/OpENer) | master, v2.3-588 | commit `d8820ef41ce30dda06d213438ba81c81de33ffe2`, GitHub archive SHA-256 `6c34be6bfe294351a69544722079751f96cdc24ac1a43337dd3e22d843f5b95b` | independent, C |
+| `opener` | [OpENer](https://github.com/EIPStackGroup/OpENer) | master, v2.3-591 | commit `0e1ab7ee5c272950c0dc8daf7793008d7a518912`, GitHub archive SHA-256 `5b01333bdc300c1410cf9e02d33a564320b7a6094786a047065a7ec14b21d945` | independent, C |
 | `eipscanner` | [EIPScanner](https://github.com/nimbuscontrols/EIPScanner) | master, 1.3.0-33 | commit `12c89a57ec2e7449efb1348be52af10be9ef9701`, GitHub archive SHA-256 `3efbb95bff91501328b5899dd635cfee61ec11f59f3ad7609812fb65211ddc63` | independent, C++ |
 | `cpppo` | [cpppo](https://github.com/pjkundert/cpppo) | 5.2.5 | PyPI wheel SHA-256 `0257ba393f1e2bdd06ea712cead740e496c802b3e5275c1995ee2df31f29ed1c` (tag commit `f7c224bbb2389bd26d0088eeb1a93db3a5c4858f`); greenery 2.1, sdist SHA-256 `759c3bf40b6fe6ef0a6b373230d07470e0e315f32bcdbaf381901b0d8a6f91d1` | independent, Python |
 | `pycomm3` | [pycomm3](https://github.com/ottowayi/pycomm3) | 1.2.16 | PyPI wheel SHA-256 `88e95c70472154ee32233f76af126526db208830e1e803eb9f621c8bd1d8fcd0` (commit `36aeb19b5cb47495df9fd1caa38ce9d2f6d12ea3`) | independent, Python |
