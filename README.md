@@ -5,7 +5,8 @@ TCP and UDP), providing independent target (adapter) and originator
 (scanner) implementations, deterministic fixtures, and automated
 cross-stack self-tests. Test EtherNet/IP libraries against established
 implementations: OpENer, EIPScanner, cpppo, pycomm3, libplctag, gologix,
-pylogix, etherip, eip-rs, node-ethernet-ip and EEIP.NET. Each reference is
+pylogix, etherip, eip-rs, node-ethernet-ip, EEIP.NET and loki-os's
+go-ethernet-ip. Each reference is
 containerized behind the same command-line contract, so a library can be
 tested against real implementation diversity without integrating
 third-party protocol stacks into its own code.
@@ -23,6 +24,7 @@ third-party protocol stacks into its own code.
 | `eiprs` | [eip-rs (rseip)](https://github.com/Joylei/eip-rs) main `16e2236` (0.3.1-2) | Rust | no | yes | `ghcr.io/otfabric/ethernetip-interop-eiprs` |
 | `nodeeip` | [node-ethernet-ip](https://github.com/cmseaton42/node-ethernet-ip) 2.0.0 | TypeScript | no | yes | `ghcr.io/otfabric/ethernetip-interop-nodeeip` |
 | `eeip` | [EEIP.NET](https://github.com/rossmann-engineering/EEIP.NET) master `58b91a0` (1.6.0) | C# | no | yes ⁵ | `ghcr.io/otfabric/ethernetip-interop-eeip` |
+| `lokieip` | [go-ethernet-ip (loki-os)](https://github.com/loki-os/go-ethernet-ip) master `535f797` (2022-12-29) | Go | no | yes | `ghcr.io/otfabric/ethernetip-interop-lokieip` |
 
 ¹ OpENer's sample application, a target with Class 1 I/O; it serves the
 `opener-sample` fixture (its compiled-in identity and assemblies).

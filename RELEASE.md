@@ -24,6 +24,29 @@ Tags are immutable. A fix is a new version.
 
 ---
 
+## v0.4.0
+
+**Date:** 2026-10-26
+**Previous release:** v0.3.0
+
+## Summary
+
+A twelfth reference stack: loki-os's go-ethernet-ip, a Go Logix-oriented
+originator (image `ghcr.io/otfabric/ethernetip-interop-lokieip`, WTFPL).
+
+## Changes
+
+- **Adapter** `lokieip`: ListIdentity and ListServices over TCP, generic
+  attribute services direct, routed (Unconnected_Send) or over Class 3,
+  Multiple Service Packet, Logix read, scalar write, read-tags and tag list.
+  Its quirks are in [docs/CAPABILITIES.md](docs/CAPABILITIES.md); two known
+  incompatibilities with OpENer and cpppo are in
+  `scripts/selftest-known.tsv`.
+- **Image labels**: gologix's image declares `MIT AND BSD-2-Clause` (it
+  contains crc16), lokieip's `MIT AND WTFPL`.
+
+---
+
 ## v0.3.0
 
 **Date:** 2026-10-26

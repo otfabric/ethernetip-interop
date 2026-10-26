@@ -50,5 +50,5 @@ CMD ["server"]
 LABEL org.opencontainers.image.title="ethernetip-interop-gologix" \
       org.opencontainers.image.description="EtherNet/IP and Logix tag server and originator built on gologix" \
       org.opencontainers.image.source="https://github.com/otfabric/ethernetip-interop" \
-      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.licenses="MIT AND BSD-2-Clause" \
       org.opencontainers.image.version="${ADAPTER_VERSION}"

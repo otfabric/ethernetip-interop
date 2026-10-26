@@ -4,7 +4,7 @@
 # requirements.txt of the Python adapters are the source of truth for a
 # build: scripts/check-versions.sh fails when this file disagrees with them.
 
-interop_version: "0.3.0"
+interop_version: "0.4.0"
 contract_version: "1.0"        # docs/CONTAINER_CONTRACT.md; documents carry schemaVersion "1.0", the compatible line
 fixture_schema: "1.0"          # fixtures/schema/ethernetip-fixture.schema.json
 
@@ -213,6 +213,29 @@ implementations:
     published: true
     note: "Scanner: explicit messaging and Class 1 I/O as originator (also T->O multicast and listen-only); no Class 3, no configuration data, no Multiple Service Packet."
 
+  lokieip:
+    priority: P2
+    status: implemented
+    upstream: "go-ethernet-ip"
+    repository: "https://github.com/loki-os/go-ethernet-ip"
+    module: "github.com/loki-os/go-ethernet-ip"
+    version: "0.0.0-20221229063210-535f797"   # no tags: default branch head as Go pseudo-version v0.0.0-20221229063210-535f79752f63
+    revision: "535f79752f63a4122c37c7f0f9b95ece01a8f7b4"   # default branch head (2022-12-29)
+    source_sha256: "4708b8c2f72721682d6adf4719ff2bdcea070d78271d17d078f5a597f2cd5f07"   # GitHub archive of the commit
+    module_sum: "h1:kkL3XKGDjH1qNF78xvwJ9+lzbCwy5cCQxtkcNnbVurw="   # go.sum, verified at build
+    license: "WTFPL"
+    language: "Go"
+    independent_engine: true
+    roles: [client]
+    published: true
+    note: >-
+      Small Logix-oriented originator (loki-os): ListIdentity/ListServices over
+      its TCP session, generic requests direct, through Unconnected_Send to
+      1/<slot> or over a Forward_Open (Class 3); Logix tags by name or by the
+      tag list (instance), TagGroup reads in one Multiple Service Packet. No
+      UDP, no Class 1, no fragmented services, no templates. The upstream
+      repository carries a Rockwell PDF; it is not in the image.
+
 base_images:
   # Digests recorded 2026-10-19 (the same as dnp3-interop); the Dockerfiles pin these by digest.
   debian_trixie_slim: "docker.io/library/debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f"
@@ -238,6 +261,7 @@ images:
   eiprs: "ghcr.io/otfabric/ethernetip-interop-eiprs"
   nodeeip: "ghcr.io/otfabric/ethernetip-interop-nodeeip"
   eeip: "ghcr.io/otfabric/ethernetip-interop-eeip"
+  lokieip: "ghcr.io/otfabric/ethernetip-interop-lokieip"
 
 platforms:
   - "linux/amd64"

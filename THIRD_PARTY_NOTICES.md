@@ -13,7 +13,7 @@ to the licence texts. All four images are published.
 | `adapters/eipscanner/` (links EIPScanner) | MIT |
 | `adapters/pycomm3/` (imports pycomm3) | MIT |
 | `adapters/cpppo/` (imports cpppo) | GPL-3.0-or-later ([adapters/LICENSE](adapters/LICENSE)) |
-| `adapters/libplctag/` (links libplctag), `adapters/gologix/` (links gologix), `adapters/pylogix/`, `adapters/etherip/`, `adapters/eiprs/`, `adapters/nodeeip/`, `adapters/eeip/` | MIT |
+| `adapters/libplctag/` (links libplctag), `adapters/gologix/` (links gologix), `adapters/pylogix/`, `adapters/etherip/`, `adapters/eiprs/`, `adapters/nodeeip/`, `adapters/eeip/`, `adapters/lokieip/` (links go-ethernet-ip) | MIT |
 | Image `ethernetip-interop-opener` | MIT and the OpENer licence (adapted BSD, see below), and the licences of the Debian packages |
 | Image `ethernetip-interop-eipscanner` | MIT, and the licences of the Debian packages |
 | Image `ethernetip-interop-pycomm3` | MIT, and the Python licence |
@@ -25,6 +25,7 @@ to the licence texts. All four images are published.
 | Image `ethernetip-interop-eiprs` | MIT, and the MIT/Apache-2.0 licences of the Rust crates, and the licences of the Debian packages |
 | Image `ethernetip-interop-nodeeip` | MIT, and the licences of Node.js |
 | Image `ethernetip-interop-eeip` | MIT, and the licences of the .NET runtime image |
+| Image `ethernetip-interop-lokieip` | MIT and WTFPL, and the licences of the Debian packages |
 
 Each adapter is a separate program in a separate image; no image contains two
 implementations. Nothing in this repository is linked into a consumer: a
@@ -184,6 +185,18 @@ Licence in the image: `/licenses/node-ethernet-ip/LICENSE`.
 | Base system | Ubuntu 24.04 | various; see `/usr/share/doc/*/copyright` in the image | https://ubuntu.com |
 
 Licence in the image: `/licenses/eeip/LICENSE`.
+
+## Image `ethernetip-interop-lokieip`
+
+| Component | Version | Licence | Source |
+|-----------|---------|---------|--------|
+| go-ethernet-ip (loki-os), compiled in | v0.0.0-20221229063210-535f79752f63, `535f79752f63a4122c37c7f0f9b95ece01a8f7b4` (Go module sum `h1:kkL3XKGDjH1qNF78xvwJ9+lzbCwy5cCQxtkcNnbVurw=`) | WTFPL | https://github.com/loki-os/go-ethernet-ip |
+| Adapter | this repository, `adapters/lokieip/` | MIT | https://github.com/otfabric/ethernetip-interop |
+| Base system | Debian trixie-slim | various; see `/usr/share/doc/*/copyright` in the image | https://www.debian.org |
+
+Licence in the image: `/licenses/go-ethernet-ip/LICENSE`. The upstream
+repository also contains a copy of Rockwell's 1756-PM020 manual (PDF); it is
+not part of the module's code and not in the image.
 
 ## Images in general
 

@@ -24,3 +24,5 @@ cpppo	gologix	logix-write	cpppo reads the written array with Read Tag Fragmented
 eeip	gologix	io-exclusive-owner	gologix accepts only two items in SendRRData; EEIP.NET's Forward_Open adds a socket address item, and gologix closes the connection
 eeip	gologix	io-large	gologix accepts only two items in SendRRData; EEIP.NET's Forward_Open adds a socket address item, and gologix closes the connection
 eeip	gologix	io-refused	gologix accepts only two items in SendRRData; EEIP.NET's Forward_Open adds a socket address item, and gologix closes the connection
+lokieip	opener	class3	go-ethernet-ip's Forward_Open path always starts with a backplane port segment (1/<slot>); OpENer refuses it, go-ethernet-ip ignores the refusal and its SendUnitData is not answered (timeout)
+lokieip	cpppo	list-services	cpppo's ListServices item has a 15-octet name; go-ethernet-ip reads 16 octets and gets an empty name
