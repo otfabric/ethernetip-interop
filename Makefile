@@ -57,8 +57,9 @@ ci: validate lint images smoke selftest ## Full local CI: validate, lint, build,
 
 # ── Validation ───────────────────────────────────────────────────────────────
 
-validate: ## Check versions.yaml against the build files; validate every fixture against the schema and the cross-field rules
+validate: ## Check versions.yaml against the build files and RELEASE.md; validate every fixture against the schema and the cross-field rules
 	@scripts/check-versions.sh
+	@scripts/release-notes.sh > /dev/null && echo "ok   RELEASE.md has the notes of interop_version"
 	@echo "Validating fixtures..."
 	@if python3 -c 'import jsonschema' 2>/dev/null; then \
 		python3 scripts/validate-fixtures.py --require-schema; \

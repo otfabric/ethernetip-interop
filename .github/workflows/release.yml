@@ -49,6 +49,8 @@ jobs:
           python3 scripts/validate-fixtures.py --require-schema
           want="interop_version: \"${VERSION#v}\""
           grep -qF "$want" versions.yaml || { echo "::error::versions.yaml does not say $want"; exit 1; }
+          # The notes of this version become the body of the GitHub release.
+          scripts/release-notes.sh "${VERSION}" > /dev/null || { echo "::error::RELEASE.md has no notes for ${VERSION}"; exit 1; }
 
       - name: Build for linux/${{ matrix.arch }} and self-test
         run: |
@@ -137,31 +139,46 @@ jobs:
           cat manifest.json
           sha256sum manifest.json > checksums.txt
 
+      # The body is the section of this version in RELEASE.md (up to its
+      # "---", as in every otfabric repository), followed by the images.
+      - name: Write the release body
+        env:
+          OPENER: ${{ steps.digests.outputs.opener }}
+          EIPSCANNER: ${{ steps.digests.outputs.eipscanner }}
+          CPPPO: ${{ steps.digests.outputs.cpppo }}
+          PYCOMM3: ${{ steps.digests.outputs.pycomm3 }}
+        run: |
+          {
+            scripts/release-notes.sh "${VERSION}"
+            echo
+            echo "## Images"
+            echo
+            echo "| Image | Digest |"
+            echo "|-------|--------|"
+            echo "| \`${REGISTRY}/ethernetip-interop-opener:${VERSION}\` | \`${OPENER}\` |"
+            echo "| \`${REGISTRY}/ethernetip-interop-eipscanner:${VERSION}\` | \`${EIPSCANNER}\` |"
+            echo "| \`${REGISTRY}/ethernetip-interop-cpppo:${VERSION}\` | \`${CPPPO}\` |"
+            echo "| \`${REGISTRY}/ethernetip-interop-pycomm3:${VERSION}\` | \`${PYCOMM3}\` |"
+            echo
+            echo "linux/amd64 and linux/arm64, each built and self-tested natively before it was pushed."
+            echo
+            echo "## Pinning in a consumer"
+            echo
+            echo '```bash'
+            echo "ETHERNETIP_INTEROP_OPENER_IMAGE=${REGISTRY}/ethernetip-interop-opener@${OPENER}"
+            echo "ETHERNETIP_INTEROP_EIPSCANNER_IMAGE=${REGISTRY}/ethernetip-interop-eipscanner@${EIPSCANNER}"
+            echo "ETHERNETIP_INTEROP_CPPPO_IMAGE=${REGISTRY}/ethernetip-interop-cpppo@${CPPPO}"
+            echo "ETHERNETIP_INTEROP_PYCOMM3_IMAGE=${REGISTRY}/ethernetip-interop-pycomm3@${PYCOMM3}"
+            echo '```'
+            echo
+            echo "\`manifest.json\` records the upstream revisions these images were built from. The images are for interoperability testing only. The opener image contains OpENer under its adapted BSD licence (products implementing EtherNet/IP also need ODVA's Terms of Usage); the cpppo image is GPL-3.0 as a whole; the eipscanner and pycomm3 images are MIT. See \`THIRD_PARTY_NOTICES.md\`."
+          } > "${RUNNER_TEMP}/release-body.md"
+          cat "${RUNNER_TEMP}/release-body.md"
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v3
         with:
-          body: |
-            ## Images
-
-            | Image | Digest |
-            |-------|--------|
-            | `ghcr.io/otfabric/ethernetip-interop-opener:${{ github.ref_name }}` | `${{ steps.digests.outputs.opener }}` |
-            | `ghcr.io/otfabric/ethernetip-interop-eipscanner:${{ github.ref_name }}` | `${{ steps.digests.outputs.eipscanner }}` |
-            | `ghcr.io/otfabric/ethernetip-interop-cpppo:${{ github.ref_name }}` | `${{ steps.digests.outputs.cpppo }}` |
-            | `ghcr.io/otfabric/ethernetip-interop-pycomm3:${{ github.ref_name }}` | `${{ steps.digests.outputs.pycomm3 }}` |
-
-            linux/amd64 and linux/arm64, each built and self-tested natively before it was pushed.
-
-            ## Pinning in a consumer
-
-            ```bash
-            ETHERNETIP_INTEROP_OPENER_IMAGE=ghcr.io/otfabric/ethernetip-interop-opener@${{ steps.digests.outputs.opener }}
-            ETHERNETIP_INTEROP_EIPSCANNER_IMAGE=ghcr.io/otfabric/ethernetip-interop-eipscanner@${{ steps.digests.outputs.eipscanner }}
-            ETHERNETIP_INTEROP_CPPPO_IMAGE=ghcr.io/otfabric/ethernetip-interop-cpppo@${{ steps.digests.outputs.cpppo }}
-            ETHERNETIP_INTEROP_PYCOMM3_IMAGE=ghcr.io/otfabric/ethernetip-interop-pycomm3@${{ steps.digests.outputs.pycomm3 }}
-            ```
-
-            `manifest.json` records the upstream revisions these images were built from. The images are for interoperability testing only. The opener image contains OpENer under its adapted BSD licence (products implementing EtherNet/IP also need ODVA's Terms of Usage); the cpppo image is GPL-3.0 as a whole; the eipscanner and pycomm3 images are MIT. See `THIRD_PARTY_NOTICES.md`. Notes: `RELEASE.md`.
+          body_path: ${{ runner.temp }}/release-body.md
           files: |
             manifest.json
             checksums.txt
