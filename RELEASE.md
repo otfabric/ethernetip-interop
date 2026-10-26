@@ -2,10 +2,17 @@
 
 ## How a release is made
 
-1. `make ci` on the commit to release.
-2. Update `interop_version` in `versions.yaml` and the notes below.
-3. Tag `vX.Y.Z` and push the tag. The release workflow runs one job on an amd64 runner and one on an arm64 runner: each validates, builds every image natively with `ADAPTER_VERSION` set to the tag, runs the smoke test and the cross-stack self-test on those images and pushes exactly those images to GHCR as `<image>:vX.Y.Z-amd64` and `-arm64`. A last job joins the two into the multi-arch `<image>:vX.Y.Z` and creates the GitHub release with the image digests in its notes, `manifest.json` (upstream pins and the digests of the multi-arch images) and `checksums.txt`.
+1. Write the notes of the version below and set `interop_version` in `versions.yaml` to it, in the same change. `make validate` (and CI) fails when RELEASE.md has no notes for `interop_version`.
+2. `make ci` on the commit to release.
+3. Tag `vX.Y.Z` and push the tag. The release workflow runs one job on an amd64 runner and one on an arm64 runner: each validates (including the notes of the tag), builds every image natively with `ADAPTER_VERSION` set to the tag, runs the smoke test and the cross-stack self-test on those images and pushes exactly those images to GHCR as `<image>:vX.Y.Z-amd64` and `-arm64`. A last job joins the two into the multi-arch `<image>:vX.Y.Z` and creates the GitHub release with the notes and the image digests in its body, `manifest.json` (upstream pins and the digests of the multi-arch images) and `checksums.txt`.
 4. Consumers pin the digests.
+
+The notes are the body of the GitHub release, followed by the image digests:
+everything after the heading `## vX.Y.Z` up to the next line that is exactly
+`---` (`scripts/release-notes.sh vX.Y.Z` prints it). This is the format of
+every otfabric repository and the rule of the shared release workflow, so:
+one section per version, newest first, each ending with a `---` line, and no
+`---` line inside a section.
 
 Tags are immutable. A fix is a new version.
 
@@ -71,3 +78,5 @@ Base images: Debian trixie-slim and Python 3.14.8 slim-trixie, by digest
 - **Schemas** of the capability and client result documents (`schemas/`).
 - **Self-tests**: `make smoke` (the contract of each image) and `make selftest` (every client against every server for what both declare), with every document checked against the schemas. Results in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 - **Adapters**: the cpppo server now loads the fixture's identity into cpppo (it ran with cpppo's default identity before), stops cleanly on SIGTERM, and refuses fixtures cpppo cannot serve (an output-to-input echo; vendor id, device type or product code above 32767); cpppo's client gained `list-services`. EIPScanner's adapter rejects unknown flags, `--connected`, `--multicast` and `--transport tcp` as usage errors. pycomm3's `list-identity --transport udp` uses `discover()`, and `--timeout-ms` sets its socket timeout. All four: a capability document with upstream, version and features per role; `upstreamVersion` in `version`; `print-fixture` refuses names with path separators.
+
+---
