@@ -100,6 +100,34 @@ smoke-%: FORCE ## Smoke test one adapter, e.g. smoke-opener
 selftest: ## Cross-stack self-test: every client against every server; documents and summary in reports/selftest/
 	@scripts/selftest.sh $(ADAPTERS)
 
+# ── Upstream candidates ───────────────────────────────────────────────────────
+# Builds one adapter on another upstream than its release pin and self-tests
+# it against the other adapters at their pins (built first: make images).
+# Every adapter Dockerfile takes its upstream as the build arguments
+# UPSTREAM_VERSION and UPSTREAM_SHA (the commit, which every image reports as
+# its upstream revision). At the pin, every hash check of the release build
+# applies; any other value takes the Dockerfile's candidate path, which says
+# "candidate build: ..." on stderr. Bugs of that upstream version listed in
+# scripts/known-bugs.tsv are reported as known, so that the run shows whether
+# everything else works. scripts/latest-upstream.py <adapter> prints the
+# latest upstream (latest, latest_sha). Release pins are never modified.
+
+CANDIDATE_VERSION ?=
+CANDIDATE_SHA     ?=
+
+candidate-%: FORCE ## Build one adapter on CANDIDATE_VERSION and CANDIDATE_SHA and self-test it, e.g. candidate-opener CANDIDATE_VERSION=2.3-591 CANDIDATE_SHA=<commit>
+	@test -n "$(CANDIDATE_VERSION)" || { echo "Error: CANDIDATE_VERSION=<upstream version> is required"; exit 1; }
+	@echo "$(CANDIDATE_SHA)" | grep -qE '^[0-9a-f]{40}$$' || { echo "Error: CANDIDATE_SHA=<the upstream commit, 40 hex digits> is required (scripts/latest-upstream.py $* prints it as latest_sha)"; exit 1; }
+	@echo "Building $* candidate on $(CANDIDATE_VERSION) ($(CANDIDATE_SHA))..."
+	@$(RETRY) docker build \
+		--build-arg BASE_REGISTRY=$(BASE_REGISTRY) --build-arg ADAPTER_VERSION=candidate \
+		--build-arg UPSTREAM_VERSION=$(CANDIDATE_VERSION) --build-arg UPSTREAM_SHA=$(CANDIDATE_SHA) \
+		--tag $(call image,$*):candidate \
+		--file adapters/$*/Dockerfile .
+	@for a in $(filter-out $*,$(ADAPTERS)); do docker tag $(call image,$$a):$(VERSION) $(call image,$$a):candidate || exit 1; done
+	@VERSION=candidate scripts/smoke.sh $*
+	@VERSION=candidate REPORT_DIR=reports/candidate scripts/selftest.sh $(ADAPTERS)
+
 capabilities: ## Print the capability document of every adapter
 	@for a in $(ADAPTERS); do docker run --rm $(call image,$$a):$(VERSION) print-capabilities; done
 
@@ -198,5 +226,5 @@ clean: ## Remove test containers, networks, local images and reports
 	@docker ps -aq --filter "label=ethernetip-interop.run" | xargs docker rm -f >/dev/null 2>&1 || true
 	@docker network ls --format '{{.Name}}' | grep '^ethernetip-interop-' | xargs docker network rm >/dev/null 2>&1 || true
 	@docker compose down --remove-orphans 2>/dev/null || true
-	@for a in $(ADAPTERS); do docker rmi $(call image,$$a):$(VERSION) 2>/dev/null || true; done
+	@for a in $(ADAPTERS); do docker rmi $(call image,$$a):$(VERSION) $(call image,$$a):candidate 2>/dev/null || true; done
 	@rm -rf reports

@@ -18,10 +18,24 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential cmake libcap-dev ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
-RUN curl -fsSL -o opener.tar.gz "https://github.com/EIPStackGroup/OpENer/archive/${UPSTREAM_SHA}.tar.gz" \
-    && echo "${UPSTREAM_SHA256}  opener.tar.gz" | sha256sum -c - \
-    && tar xzf opener.tar.gz --strip-components=1 \
-    && rm opener.tar.gz
+# The pins of this file, to tell the release build from a candidate build.
+COPY adapters/opener/Dockerfile /tmp/pins
+# The release build checks the archive of the pinned commit against its
+# SHA-256. A candidate build ("make candidate-opener") overrides UPSTREAM_SHA
+# with another commit, whose archive has no recorded hash: it says so on
+# stderr and leaves /tmp/candidate behind for the steps below.
+RUN set -eu; \
+    pinned="$(sed -nE 's/^ARG UPSTREAM_SHA=(.+)$/\1/p' /tmp/pins | head -1)"; \
+    test -n "${pinned}"; \
+    if [ "${UPSTREAM_SHA}" != "${pinned}" ]; then \
+        printf '%s' "${UPSTREAM_SHA}" | grep -qE '^[0-9a-f]{40}$' || { echo "UPSTREAM_SHA must be a full commit hash" >&2; exit 1; }; \
+        echo "candidate build: OpENer ${UPSTREAM_SHA} instead of the pin ${pinned}, no archive hash to check" >&2; \
+        touch /tmp/candidate; \
+    fi; \
+    curl -fsSL -o opener.tar.gz "https://github.com/EIPStackGroup/OpENer/archive/${UPSTREAM_SHA}.tar.gz"; \
+    if [ ! -e /tmp/candidate ]; then echo "${UPSTREAM_SHA256}  opener.tar.gz" | sha256sum -c -; fi; \
+    tar xzf opener.tar.gz --strip-components=1; \
+    rm opener.tar.gz
 WORKDIR /src/build
 # The sample application, as OpENer's bin/posix/setup_posix.sh builds it.
 RUN cmake -DCMAKE_C_COMPILER=gcc -DOpENer_PLATFORM=POSIX -DCMAKE_BUILD_TYPE=Release \
@@ -42,6 +56,11 @@ COPY --from=build /usr/local/bin/OpENer /usr/local/bin/OpENer
 COPY --from=build /src/license.txt /licenses/opener/license.txt
 COPY adapters/opener/ethernetip-interop.sh /usr/local/bin/ethernetip-interop
 COPY adapters/opener/capabilities.json /opt/adapter/capabilities.json
+# The capability document names the upstream that was built: the pin, or a
+# candidate's version and commit (a no-op for the release build).
+RUN sed -i -E -e "s/^(    \"version\": )\"[^\"]*\"/\\1\"${UPSTREAM_VERSION}\"/" \
+        -e "s/^(    \"revision\": )\"[^\"]*\"/\\1\"${UPSTREAM_SHA}\"/" /opt/adapter/capabilities.json \
+    && grep -qF "\"revision\": \"${UPSTREAM_SHA}\"" /opt/adapter/capabilities.json
 COPY THIRD_PARTY_NOTICES.md /licenses/THIRD_PARTY_NOTICES.md
 COPY LICENSE /licenses/LICENSE
 COPY fixtures /fixtures

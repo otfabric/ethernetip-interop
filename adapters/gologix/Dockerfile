@@ -20,7 +20,17 @@ ARG UPSTREAM_VERSION=0.44.0-beta
 ENV CGO_ENABLED=0 GOFLAGS=-mod=readonly GOTOOLCHAIN=local GOWORK=off
 WORKDIR /src/adapter
 COPY adapters/gologix/go.mod adapters/gologix/go.sum ./
-RUN go mod download && go mod verify \
+# The release build downloads what go.sum pins and verifies it. A candidate
+# build ("make candidate-gologix") overrides UPSTREAM_VERSION: go get moves
+# go.mod and go.sum to that version (checked against the Go checksum
+# database, as every module download is), which it says on stderr.
+RUN pinned="$(sed -nE 's/^require github.com\/danomagnum\/gologix v(.+)$/\1/p' go.mod)" \
+    && test -n "${pinned}" \
+    && if [ "${UPSTREAM_VERSION}" != "${pinned}" ]; then \
+         echo "candidate build: gologix ${UPSTREAM_VERSION} instead of the pin ${pinned}, go.sum updated by go get" >&2 \
+         && GOFLAGS= go get "github.com/danomagnum/gologix@v${UPSTREAM_VERSION}"; \
+       fi \
+    && go mod download && go mod verify \
     && test "$(go list -m -f '{{.Version}}' github.com/danomagnum/gologix)" = "v${UPSTREAM_VERSION}"
 COPY adapters/gologix/*.go ./
 RUN go vet ./... \

@@ -19,7 +19,21 @@ ENV PYTHONDONTWRITEBYTECODE=1 PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1
     ETHERNETIP_INTEROP_ADAPTER_VERSION=${ADAPTER_VERSION} ETHERNETIP_INTEROP_UPSTREAM_REVISION=${UPSTREAM_SHA} \
     ETHERNETIP_INTEROP_UPSTREAM_VERSION=${UPSTREAM_VERSION}
 COPY adapters/cpppo/requirements.txt /opt/adapter/requirements.txt
-RUN pip install --require-hashes --no-deps -r /opt/adapter/requirements.txt \
+# The release build installs requirements.txt, every file checked against its
+# hash. A candidate build ("make candidate-cpppo") overrides UPSTREAM_VERSION:
+# that cpppo release has no recorded hash, so it is installed without one
+# (greenery still with its hash), which it says on stderr.
+RUN pinned="$(sed -nE 's/^cpppo==([^ ]+) .*/\1/p' /opt/adapter/requirements.txt)" \
+    && test -n "${pinned}" \
+    && if [ "${UPSTREAM_VERSION}" = "${pinned}" ]; then \
+         pip install --require-hashes --no-deps -r /opt/adapter/requirements.txt; \
+       else \
+         echo "candidate build: cpppo ${UPSTREAM_VERSION} instead of the pin ${pinned}, no hash to check" >&2 \
+         && grep -v '^cpppo==' /opt/adapter/requirements.txt > /tmp/dependencies.txt \
+         && pip install --require-hashes --no-deps -r /tmp/dependencies.txt \
+         && pip install --no-deps "cpppo==${UPSTREAM_VERSION}"; \
+       fi \
+    && test "$(python -c 'import importlib.metadata as m; print(m.version("cpppo"))')" = "${UPSTREAM_VERSION}" \
     && mkdir -p /licenses/cpppo /licenses/greenery \
     && python -c 'import importlib.metadata as m; d=m.distribution("cpppo"); [open("/licenses/cpppo/" + f.name, "w").write(f.read_text()) for f in d.files if f.name in ("LICENSE", "COPYING")]' \
     && test -s /licenses/cpppo/LICENSE && test -s /licenses/cpppo/COPYING \

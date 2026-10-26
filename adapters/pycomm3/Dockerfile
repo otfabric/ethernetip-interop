@@ -18,7 +18,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1
     ETHERNETIP_INTEROP_ADAPTER_VERSION=${ADAPTER_VERSION} ETHERNETIP_INTEROP_UPSTREAM_REVISION=${UPSTREAM_SHA} \
     ETHERNETIP_INTEROP_UPSTREAM_VERSION=${UPSTREAM_VERSION}
 COPY adapters/pycomm3/requirements.txt /opt/adapter/requirements.txt
-RUN pip install --require-hashes --only-binary=:all: -r /opt/adapter/requirements.txt \
+# The release build installs requirements.txt, every file checked against its
+# hash. A candidate build ("make candidate-pycomm3") overrides UPSTREAM_VERSION:
+# that release has no recorded hash, so it is installed without one, which it
+# says on stderr.
+RUN pinned="$(sed -nE 's/^pycomm3==([^ ]+) .*/\1/p' /opt/adapter/requirements.txt)" \
+    && test -n "${pinned}" \
+    && if [ "${UPSTREAM_VERSION}" = "${pinned}" ]; then \
+         pip install --require-hashes --only-binary=:all: -r /opt/adapter/requirements.txt; \
+       else \
+         echo "candidate build: pycomm3 ${UPSTREAM_VERSION} instead of the pin ${pinned}, no hash to check" >&2 \
+         && pip install --only-binary=:all: "pycomm3==${UPSTREAM_VERSION}"; \
+       fi \
+    && test "$(python -c 'import importlib.metadata as m; print(m.version("pycomm3"))')" = "${UPSTREAM_VERSION}" \
     && mkdir -p /licenses/pycomm3 \
     && python -c 'import importlib.metadata as m; d=m.distribution("pycomm3"); fs=[f for f in d.files if f.name.upper().startswith("LICENSE")]; open("/licenses/pycomm3/LICENSE","w").write(fs[0].read_text()) if fs else None' \
     && test -s /licenses/pycomm3/LICENSE \
