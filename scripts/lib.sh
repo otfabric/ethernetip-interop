@@ -19,6 +19,7 @@ TOOLS_REGISTRY="${TOOLS_REGISTRY:-docker.io}"
 PASS=0
 FAIL=0
 NA=0
+KNOWN_N=0
 
 log()  { echo "[$(basename "$0" .sh)] $*" >&2; }
 ok()   { PASS=$((PASS + 1)); [[ -n "${VERBOSE:-}" ]] && log "ok: $*"; return 0; }
@@ -110,7 +111,8 @@ validate_documents() {
 finish() {
     echo "" >&2
     local extra=""
-    [[ "${NA}" -gt 0 ]] && extra=", ${NA} not applicable"
+    [[ "${KNOWN_N}" -gt 0 ]] && extra=", ${KNOWN_N} known incompatibilities"
+    [[ "${NA}" -gt 0 ]] && extra="${extra}, ${NA} not applicable"
     log "${PASS} passed, ${FAIL} failed${extra}"
     [[ "${FAIL}" -eq 0 ]]
 }

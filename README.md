@@ -4,7 +4,8 @@ A Docker-based interoperability testing framework for EtherNet/IP (CIP over
 TCP and UDP), providing independent target (adapter) and originator
 (scanner) implementations, deterministic fixtures, and automated
 cross-stack self-tests. Test EtherNet/IP libraries against established
-implementations: OpENer, EIPScanner, cpppo and pycomm3. Each reference is
+implementations: OpENer, EIPScanner, cpppo, pycomm3, libplctag, gologix,
+pylogix, etherip, eip-rs, node-ethernet-ip and EEIP.NET. Each reference is
 containerized behind the same command-line contract, so a library can be
 tested against real implementation diversity without integrating
 third-party protocol stacks into its own code.
@@ -15,14 +16,28 @@ third-party protocol stacks into its own code.
 | `eipscanner` | [EIPScanner](https://github.com/nimbuscontrols/EIPScanner) master `12c89a5` (1.3.0-33) | C++ | no | yes | `ghcr.io/otfabric/ethernetip-interop-eipscanner` |
 | `cpppo` | [cpppo](https://github.com/pjkundert/cpppo) 5.2.5 | Python | yes ² | yes | `ghcr.io/otfabric/ethernetip-interop-cpppo` |
 | `pycomm3` | [pycomm3](https://github.com/ottowayi/pycomm3) 1.2.16 | Python | no | yes | `ghcr.io/otfabric/ethernetip-interop-pycomm3` |
+| `libplctag` | [libplctag](https://github.com/libplctag/libplctag) 2.7.2 | C | yes ³ | yes | `ghcr.io/otfabric/ethernetip-interop-libplctag` |
+| `gologix` | [gologix](https://github.com/danomagnum/gologix) 0.44.0-beta | Go | yes ⁴ | yes | `ghcr.io/otfabric/ethernetip-interop-gologix` |
+| `pylogix` | [pylogix](https://github.com/dmroeder/pylogix) 1.1.6 | Python | no | yes | `ghcr.io/otfabric/ethernetip-interop-pylogix` |
+| `etherip` | [etherip](https://github.com/ornl-epics/etherip) main `ce0688a` (V1.0-67) | Java | no | yes | `ghcr.io/otfabric/ethernetip-interop-etherip` |
+| `eiprs` | [eip-rs (rseip)](https://github.com/Joylei/eip-rs) main `16e2236` (0.3.1-2) | Rust | no | yes | `ghcr.io/otfabric/ethernetip-interop-eiprs` |
+| `nodeeip` | [node-ethernet-ip](https://github.com/cmseaton42/node-ethernet-ip) 2.0.0 | TypeScript | no | yes | `ghcr.io/otfabric/ethernetip-interop-nodeeip` |
+| `eeip` | [EEIP.NET](https://github.com/rossmann-engineering/EEIP.NET) master `58b91a0` (1.6.0) | C# | no | yes ⁵ | `ghcr.io/otfabric/ethernetip-interop-eeip` |
 
-¹ OpENer's sample application, the only target here with Class 1 I/O; it
-serves the `opener-sample` fixture (its compiled-in identity and assemblies).
+¹ OpENer's sample application, a target with Class 1 I/O; it serves the
+`opener-sample` fixture (its compiled-in identity and assemblies).
 ² A Logix-style simulator serving the `logix` fixture; no Class 1 I/O.
+³ libplctag's `ab_server` PLC simulator serving the `logix` fixture's tags;
+no ListIdentity, no attributes, no tag list.
+⁴ A Logix tag server with Class 1 I/O, serving the `logix` and `adapter`
+fixtures.
+⁵ A scanner with Class 1 I/O, T->O multicast and listen-only connections.
 
 The stacks do not all do the same: OpENer has no Multiple Service Packet and
 no Unconnected_Send, EIPScanner no Class 3 and no multicast, cpppo no Class 1
-and no tag list, and pycomm3's Logix driver needs a tag list from its target.
+and no tag list, pycomm3's Logix driver needs a tag list from its target, and
+the Logix clients differ in bit writes, BOOL arrays, structures and
+fragmentation.
 Each image says what it supports (`print-capabilities`); see
 [docs/CAPABILITIES.md](docs/CAPABILITIES.md).
 

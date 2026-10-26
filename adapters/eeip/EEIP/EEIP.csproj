@@ -1,0 +1,38 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!--
+  EEIP.NET's library, built unchanged from the source archive of the pinned
+  commit (unpacked to $(EeipSource) by the Dockerfile) as an SDK-style
+  project for a current .NET. Upstream's own EEIP.csproj targets .NET
+  Framework 4.5.2. Compiled are exactly the library files of upstream's
+  project; left out are its sample Program.cs (namespace ConsoleApplication1,
+  not part of the library API) and Properties/AssemblyInfo.cs, whose wildcard
+  version "1.6.0.*" would make the build non-deterministic: the version is
+  set below instead.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <AssemblyName>EEIP</AssemblyName>
+    <RootNamespace>Sres.Net.EEIP</RootNamespace>
+    <AssemblyVersion>1.6.0.0</AssemblyVersion>
+    <FileVersion>1.6.0.0</FileVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <NoWarn>$(NoWarn);CS0168;CS0169;CS0219;CS0414;CS0649;SYSLIB0014</NoWarn>
+    <Deterministic>true</Deterministic>
+    <EeipSource Condition="'$(EeipSource)' == ''">/src/eeip</EeipSource>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(EeipSource)/EEIP.NET/CIP.cs" />
+    <Compile Include="$(EeipSource)/EEIP.NET/EIPClient.cs" />
+    <Compile Include="$(EeipSource)/EEIP.NET/Encapsulation.cs" />
+    <Compile Include="$(EeipSource)/EEIP.NET/ObjectLibrary/TcpIpInterfaceObject.cs" />
+    <Compile Include="$(EeipSource)/EEIP.NET/ObjectLibrary/AssemblyObject.cs" />
+    <Compile Include="$(EeipSource)/EEIP.NET/ObjectLibrary/ConnectionManagerObject.cs" />
+    <Compile Include="$(EeipSource)/EEIP.NET/ObjectLibrary/IdentityObject.cs" />
+    <Compile Include="$(EeipSource)/EEIP.NET/ObjectLibrary/MessageRouterObject.cs" />
+  </ItemGroup>
+</Project>

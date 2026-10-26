@@ -112,12 +112,24 @@ if [[ "${serves}" == true ]]; then
     client="${SMOKE_CLIENT:-cpppo}"
     [[ "${client}" == "${ADAPTER}" ]] && client=pycomm3
     ip=$(ip_of "${name}")
-    doc=$(run_client "${client}" list-identity --host "${ip}"); code=$?
-    printf '%s\n' "${doc}" > "${DOCS}/list-identity-from-${client}.json"
-    want=$(jq -c '.identity | {productName, productCode, serialNumber, revision}' "${ROOT}/fixtures/${fixture}/fixture.json")
-    if [[ "${code}" == 0 ]] && jq -e --argjson w "${want}" '.ok and (.identity | {productName, productCode, serialNumber, revision}) == $w' \
-            <<<"${doc}" >/dev/null 2>&1
-    then ok "${client} list-identity answered with the fixture's identity"; else fail "${client} list-identity: exit ${code}, ${doc}"; fi
+    if jq -e '.serverFeatures.listIdentityTcp' <<<"${caps}" >/dev/null 2>&1; then
+        doc=$(run_client "${client}" list-identity --host "${ip}"); code=$?
+        printf '%s\n' "${doc}" > "${DOCS}/list-identity-from-${client}.json"
+        want=$(jq -c '.identity | {productName, productCode, serialNumber, revision}' "${ROOT}/fixtures/${fixture}/fixture.json")
+        if [[ "${code}" == 0 ]] && jq -e --argjson w "${want}" '.ok and (.identity | {productName, productCode, serialNumber, revision}) == $w' \
+                <<<"${doc}" >/dev/null 2>&1
+        then ok "${client} list-identity answered with the fixture's identity"; else fail "${client} list-identity: exit ${code}, ${doc}"; fi
+    elif jq -e '.serverFeatures.logixTags' <<<"${caps}" >/dev/null 2>&1; then
+        # A target without ListIdentity (libplctag's ab_server): one of the
+        # fixture's scalar tags instead, read by cpppo through slot 0.
+        tag=$(jq -c '[.tags[] | select((.count // 1) == 1 and .type != "BOOL" and .values)][0]' "${ROOT}/fixtures/${fixture}/fixture.json")
+        doc=$(run_client cpppo read-tag --host "${ip}" --tag "$(jq -r '.name' <<<"${tag}")" --type "$(jq -r '.type' <<<"${tag}")" --route 1/0); code=$?
+        printf '%s\n' "${doc}" > "${DOCS}/read-tag-from-cpppo.json"
+        if [[ "${code}" == 0 ]] && jq -e --argjson t "${tag}" '.ok and .values == $t.values' <<<"${doc}" >/dev/null 2>&1
+        then ok "cpppo read-tag answered with the fixture's value"; else fail "cpppo read-tag: exit ${code}, ${doc}"; fi
+    else
+        fail "the server declares neither listIdentityTcp nor logixTags: nothing to probe it with"
+    fi
     docker stop -t 10 "${name}" >/dev/null
     code=$(docker inspect --format '{{.State.ExitCode}}' "${name}")
     last=$(docker logs "${name}" 2>/dev/null | tail -1)
@@ -140,6 +152,12 @@ if [[ "${clients}" == true ]]; then
         ip=$(ip_of "${name}")
         fixture=$(capabilities "${server}" | jq -r '.fixtures[0]')
         doc=$(run_client "${ADAPTER}" get-attribute --host "${ip}" --class 1 --instance 1 --attribute 7); code=$?
+        # A client whose unconnected path the server cannot take (libplctag's
+        # raw requests always go through Unconnected_Send, which OpENer
+        # lacks) is tried once more over Class 3, when it declares Class 3.
+        if ! jq -e '.ok and .status == 0' <<<"${doc}" >/dev/null 2>&1 && jq -e '.clientFeatures.class3' <<<"${caps}" >/dev/null 2>&1; then
+            doc=$(run_client "${ADAPTER}" get-attribute --host "${ip}" --class 1 --instance 1 --attribute 7 --connected); code=$?
+        fi
         printf '%s\n' "${doc}" > "${DOCS}/get-attribute-${server}.json"
         want=$(jq -r '.identity.productName' "${ROOT}/fixtures/${fixture}/fixture.json")
         want=$(printf '%02x' "${#want}")$(printf '%s' "${want}" | od -An -tx1 | tr -d ' \n')

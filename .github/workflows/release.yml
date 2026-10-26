@@ -27,7 +27,7 @@ jobs:
   build:
     name: Build, test, push (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 60
+    timeout-minutes: 120
     strategy:
       fail-fast: true
       matrix:
@@ -99,79 +99,61 @@ jobs:
         run: make publish-manifest
 
       - name: Digests of the multi-arch images
-        id: digests
         run: |
           make -s digests | tee digests.txt
           while read -r adapter digest; do
             [[ "${digest}" == sha256:* ]] || { echo "::error::no digest for ${adapter}"; exit 1; }
-            echo "${adapter}=${digest}" >> "$GITHUB_OUTPUT"
           done < digests.txt
 
+      # Every published adapter, from digests.txt: no adapter is named here.
       - name: Write manifest.json
         run: |
           arg() { sed -nE "s/^ARG $2=(.*)$/\1/p" "$1" | head -1; }
-          up() { jq -n --arg v "$(arg "adapters/$1/Dockerfile" UPSTREAM_VERSION)" --arg r "$(arg "adapters/$1/Dockerfile" UPSTREAM_SHA)" '{version: $v, revision: $r}'; }
+          upstream='{}'; images='{}'
+          while read -r adapter digest; do
+            f="adapters/${adapter}/Dockerfile"
+            upstream=$(jq --arg a "${adapter}" --arg v "$(arg "${f}" UPSTREAM_VERSION)" --arg r "$(arg "${f}" UPSTREAM_SHA)" \
+              '. + {($a): {version: $v, revision: $r}}' <<<"${upstream}")
+            images=$(jq --arg a "${adapter}" --arg i "${REGISTRY}/ethernetip-interop-${adapter}@${digest}" '. + {($a): $i}' <<<"${images}")
+          done < digests.txt
           jq -n \
             --arg version "${VERSION}" \
             --arg commit "${GITHUB_SHA}" \
             --arg contract "$(sed -nE 's/^contract_version: "([^"]+)".*/\1/p' versions.yaml)" \
             --arg fixture "$(sed -nE 's/^fixture_schema: "([^"]+)".*/\1/p' versions.yaml)" \
-            --argjson opener "$(up opener)" --argjson eipscanner "$(up eipscanner)" \
-            --argjson cpppo "$(up cpppo)" --argjson pycomm3 "$(up pycomm3)" \
-            --arg opener_digest "${{ steps.digests.outputs.opener }}" \
-            --arg eipscanner_digest "${{ steps.digests.outputs.eipscanner }}" \
-            --arg cpppo_digest "${{ steps.digests.outputs.cpppo }}" \
-            --arg pycomm3_digest "${{ steps.digests.outputs.pycomm3 }}" \
-            '{
-              version: $version,
-              commit: $commit,
-              contract: $contract,
-              fixtureSchema: $fixture,
-              platforms: ["linux/amd64", "linux/arm64"],
-              upstream: { OpENer: $opener, EIPScanner: $eipscanner, cpppo: $cpppo, pycomm3: $pycomm3 },
-              images: {
-                opener: ("ghcr.io/otfabric/ethernetip-interop-opener@" + $opener_digest),
-                eipscanner: ("ghcr.io/otfabric/ethernetip-interop-eipscanner@" + $eipscanner_digest),
-                cpppo: ("ghcr.io/otfabric/ethernetip-interop-cpppo@" + $cpppo_digest),
-                pycomm3: ("ghcr.io/otfabric/ethernetip-interop-pycomm3@" + $pycomm3_digest)
-              }
-            }' > manifest.json
+            --argjson upstream "${upstream}" --argjson images "${images}" \
+            '{version: $version, commit: $commit, contract: $contract, fixtureSchema: $fixture,
+              platforms: ["linux/amd64", "linux/arm64"], upstream: $upstream, images: $images}' > manifest.json
           cat manifest.json
           sha256sum manifest.json > checksums.txt
 
       # The body is the section of this version in RELEASE.md (up to its
       # "---", as in every otfabric repository), followed by the images.
       - name: Write the release body
-        env:
-          OPENER: ${{ steps.digests.outputs.opener }}
-          EIPSCANNER: ${{ steps.digests.outputs.eipscanner }}
-          CPPPO: ${{ steps.digests.outputs.cpppo }}
-          PYCOMM3: ${{ steps.digests.outputs.pycomm3 }}
         run: |
+          label() { sed -nE "s/.*org\.opencontainers\.image\.licenses=\"([^\"]+)\".*/\1/p" "adapters/$1/Dockerfile" | head -1; }
           {
             scripts/release-notes.sh "${VERSION}"
             echo
             echo "## Images"
             echo
-            echo "| Image | Digest |"
-            echo "|-------|--------|"
-            echo "| \`${REGISTRY}/ethernetip-interop-opener:${VERSION}\` | \`${OPENER}\` |"
-            echo "| \`${REGISTRY}/ethernetip-interop-eipscanner:${VERSION}\` | \`${EIPSCANNER}\` |"
-            echo "| \`${REGISTRY}/ethernetip-interop-cpppo:${VERSION}\` | \`${CPPPO}\` |"
-            echo "| \`${REGISTRY}/ethernetip-interop-pycomm3:${VERSION}\` | \`${PYCOMM3}\` |"
+            echo "| Image | Digest | Licence |"
+            echo "|-------|--------|---------|"
+            while read -r adapter digest; do
+              echo "| \`${REGISTRY}/ethernetip-interop-${adapter}:${VERSION}\` | \`${digest}\` | $(label "${adapter}") |"
+            done < digests.txt
             echo
             echo "linux/amd64 and linux/arm64, each built and self-tested natively before it was pushed."
             echo
             echo "## Pinning in a consumer"
             echo
             echo '```bash'
-            echo "ETHERNETIP_INTEROP_OPENER_IMAGE=${REGISTRY}/ethernetip-interop-opener@${OPENER}"
-            echo "ETHERNETIP_INTEROP_EIPSCANNER_IMAGE=${REGISTRY}/ethernetip-interop-eipscanner@${EIPSCANNER}"
-            echo "ETHERNETIP_INTEROP_CPPPO_IMAGE=${REGISTRY}/ethernetip-interop-cpppo@${CPPPO}"
-            echo "ETHERNETIP_INTEROP_PYCOMM3_IMAGE=${REGISTRY}/ethernetip-interop-pycomm3@${PYCOMM3}"
+            while read -r adapter digest; do
+              echo "ETHERNETIP_INTEROP_$(tr '[:lower:]' '[:upper:]' <<<"${adapter}")_IMAGE=${REGISTRY}/ethernetip-interop-${adapter}@${digest}"
+            done < digests.txt
             echo '```'
             echo
-            echo "\`manifest.json\` records the upstream revisions these images were built from. The images are for interoperability testing only. The opener image contains OpENer under its adapted BSD licence (products implementing EtherNet/IP also need ODVA's Terms of Usage); the cpppo image is GPL-3.0 as a whole; the eipscanner and pycomm3 images are MIT. See \`THIRD_PARTY_NOTICES.md\`."
+            echo "\`manifest.json\` records the upstream revisions these images were built from. The images are for interoperability testing only; each contains its upstream under the licence above (the opener image: OpENer's adapted BSD licence, and products implementing EtherNet/IP also need ODVA's Terms of Usage). See \`THIRD_PARTY_NOTICES.md\`."
           } > "${RUNNER_TEMP}/release-body.md"
           cat "${RUNNER_TEMP}/release-body.md"
 

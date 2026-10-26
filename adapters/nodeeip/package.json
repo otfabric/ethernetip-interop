@@ -1,0 +1,11 @@
+{
+  "name": "ethernetip-interop-nodeeip",
+  "version": "0.0.0",
+  "private": true,
+  "description": "ethernetip-interop adapter for node-ethernet-ip (the npm package ethernet-ip)",
+  "license": "MIT",
+  "main": "nodeeip_interop.js",
+  "dependencies": {
+    "ethernet-ip": "2.0.0"
+  }
+}

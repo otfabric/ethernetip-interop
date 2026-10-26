@@ -24,6 +24,50 @@ Tags are immutable. A fix is a new version.
 
 ---
 
+## v0.3.0
+
+**Date:** 2026-10-26
+**Previous release:** v0.2.0
+
+## Summary
+
+Seven more reference stacks, in five more languages: libplctag (C, with its
+ab_server simulator as a target), gologix (Go, client and a target with
+Class 1 I/O), pylogix (Python), etherip (Java), eip-rs (Rust),
+node-ethernet-ip (TypeScript) and EEIP.NET (C#, a scanner with Class 1 I/O,
+multicast and listen-only). Eleven images, all behind container contract
+1.0; the self-test now runs every client against four servers.
+
+## Images
+
+| Image | Upstream | Roles |
+|-------|----------|-------|
+| `ghcr.io/otfabric/ethernetip-interop-libplctag` | libplctag v2.7.2 (`7712ed7`), used under MPL-2.0 | server (ab_server, `logix` fixture) and client |
+| `ghcr.io/otfabric/ethernetip-interop-gologix` | gologix v0.44.0-beta (`647a0b8`), MIT | server (`logix`, `adapter` fixtures; Class 1 I/O) and client |
+| `ghcr.io/otfabric/ethernetip-interop-pylogix` | pylogix 1.1.6, Apache-2.0 | client |
+| `ghcr.io/otfabric/ethernetip-interop-etherip` | etherip main `ce0688a` (V1.0-67), EPL-1.0 | client |
+| `ghcr.io/otfabric/ethernetip-interop-eiprs` | eip-rs (rseip) main `16e2236` (0.3.1-2), MIT | client |
+| `ghcr.io/otfabric/ethernetip-interop-nodeeip` | node-ethernet-ip 2.0.0, MIT | client |
+| `ghcr.io/otfabric/ethernetip-interop-eeip` | EEIP.NET master `58b91a0` (1.6.0), MIT | client (scanner) |
+
+## Changes
+
+- **Adapters**: the seven above, each with its capability document and its
+  quirks in [docs/CAPABILITIES.md](docs/CAPABILITIES.md).
+- **pycomm3 adapter**: `read-tags` with a single tag works (pycomm3 returns
+  a single result instead of a list).
+- **Smoke test**: a server is probed with ListIdentity only when it declares
+  it, otherwise with a Read Tag of its fixture (ab_server has no
+  ListIdentity); a client whose unconnected request a server refuses is
+  tried over Class 3 when it declares Class 3.
+- **Tooling**: `check-versions.sh`, the self-test and the release workflow
+  take the adapters from the Makefile instead of naming them; the release's
+  `manifest.json` keys `upstream` and `images` by adapter name (it named
+  OpENer, EIPScanner, cpppo and pycomm3 before).
+- **CI**: two-hour job limits for the larger build.
+
+---
+
 ## v0.2.0
 
 **Date:** 2026-10-26
