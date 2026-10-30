@@ -220,12 +220,12 @@ result document under `reports/selftest/` with `summary.md` and
 `summary.tsv`. See [CONTRIBUTING.md](CONTRIBUTING.md) for adding an adapter,
 a fixture or a client operation.
 
-A weekly workflow, **Upstream candidates**, compares every pin with the
-latest upstream (the newest release, or the head of the default branch for
-the six stacks pinned to a commit), builds and self-tests a candidate image
-where a pin is behind, and keeps an issue open with the decision table while
-any pin is behind. Pins are never moved automatically; see
-[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md#upstream-candidates).
+A daily workflow, **Upstream**, compares every pin with the latest upstream
+(the newest release, or the head of the default branch for the six stacks
+pinned to a commit) and every base-image digest with its tag, builds and
+self-tests a candidate image where a pin is behind, and keeps an issue open
+with the pin-vs-latest table while any pin is behind. Pins are never moved
+automatically; see [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md#upstream-check).
 
 ## Security
 

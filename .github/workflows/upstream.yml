@@ -1,0 +1,141 @@
+name: Upstream
+run-name: "Upstream check (${{ github.event_name }})"
+
+# Daily check of every pin against the latest upstream: every stack
+# (scripts/latest-upstream.py) and the digest of every base image. A stack
+# whose pin is behind is built at the latest upstream and self-tested (once
+# per pin -> latest pair; later runs reuse that result). The table goes to the
+# Job Summary and to the issue "Upstream releases: pins behind the latest",
+# which is opened or updated (with a comment when a new version shows up) and
+# closed once every pin is current. Pins are never changed here: a bump is a
+# reviewed change.
+#
+# Six stacks are pinned to a release (kind library: the latest is the newest
+# release) and six to a default-branch commit, because upstream has no recent
+# release (kind commit: the latest is the head of the default branch).
+#
+# A candidate is tested like a release: smoke test plus the cross-stack
+# self-test against the pinned other stacks. Bugs of a specific upstream
+# version listed in scripts/known-bugs.tsv are reported as known rather than
+# as failures. Shared steps: https://github.com/otfabric/.github/tree/main/actions
+on:
+  schedule:
+    - cron: "15 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upstream
+  cancel-in-progress: false
+
+env:
+  # Nothing is pulled from Docker Hub: anonymous pulls are rate limited per
+  # runner address and its token service times out under load. Base images
+  # (pinned by digest) and build tooling come from Google's mirror of it, and
+  # every registry operation is retried on transient failures (scripts/retry.sh).
+  BASE_REGISTRY: mirror.gcr.io/library
+  TOOLS_REGISTRY: mirror.gcr.io
+
+jobs:
+  images:
+    name: Base images
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: otfabric/.github/actions/upstream-images@main
+
+  candidate:
+    name: ${{ matrix.adapter }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        adapter: [opener, eipscanner, cpppo, pycomm3, libplctag, gologix, pylogix, etherip, eiprs, nodeeip, eeip, lokieip]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve the pin against upstream
+        id: resolve
+        run: scripts/latest-upstream.py "${{ matrix.adapter }}" | tee -a "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v7
+        if: steps.resolve.outputs.update == 'yes'
+        with:
+          python-version: "3.12"
+      - if: steps.resolve.outputs.update == 'yes'
+        run: pip install jsonschema
+
+      # A commit pin is keyed by its commit; the self-test summary
+      # (reports/candidate/selftest/summary.md) goes into the log.
+      - name: Build and self-test at the latest upstream
+        id: test
+        if: steps.resolve.outputs.update == 'yes'
+        uses: otfabric/.github/actions/upstream-candidate@main
+        with:
+          name: ${{ matrix.adapter }}
+          pinned: ${{ steps.resolve.outputs.pin }} ${{ steps.resolve.outputs.pin_sha }}
+          latest: ${{ steps.resolve.outputs.latest }} ${{ steps.resolve.outputs.latest_sha }}
+          result-pattern: '^\[selftest\] [0-9]+ passed'
+          command: >-
+            make -j4 --output-sync=target images &&
+            { make "candidate-${{ matrix.adapter }}"
+            CANDIDATE_VERSION="${{ steps.resolve.outputs.latest }}"
+            CANDIDATE_SHA="${{ steps.resolve.outputs.latest_sha }}" || rc=$?;
+            cat reports/candidate/selftest/summary.md 2>/dev/null || true;
+            exit "${rc:-0}"; }
+
+      - name: Known bugs of the latest upstream
+        id: known
+        if: always()
+        run: |
+          known=$(awk -F'\t' -v a="${{ matrix.adapter }}" -v v="${{ steps.resolve.outputs.latest }}" \
+            '!/^#/ && $1 == a && $2 == v { printf "%s%s", sep, $6; sep = "; " }' scripts/known-bugs.tsv)
+          echo "known=${known}" >> "$GITHUB_OUTPUT"
+
+      - name: Table row
+        if: always()
+        uses: otfabric/.github/actions/upstream-row@main
+        with:
+          component: ${{ matrix.adapter }}
+          kind: ${{ steps.resolve.outputs.kind || 'library' }}
+          source: ${{ steps.resolve.outputs.source }}
+          pinned: ${{ steps.resolve.outputs.pin }}
+          latest: ${{ steps.resolve.outputs.latest }}
+          update: ${{ steps.resolve.outputs.update }}
+          detail: ${{ steps.resolve.outcome == 'failure' && 'upstream lookup failed (see the job log)' || steps.resolve.outputs.note }}
+          test-outcome: ${{ steps.test.outputs.outcome }}
+          test-result: ${{ steps.test.outputs.result }}
+          test-cached: ${{ steps.test.outputs.cached }}
+          known: ${{ steps.known.outputs.known }}
+
+  report:
+    name: Report
+    runs-on: ubuntu-latest
+    needs: [images, candidate]
+    if: always()
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: otfabric/.github/actions/upstream-report@main
+        with:
+          needs: ${{ toJSON(needs) }}
+          notes: |
+            ### To update
+
+            - **Library or commit:** move `ARG UPSTREAM_VERSION` and `ARG UPSTREAM_SHA` (the
+              commit; `scripts/latest-upstream.py <adapter>` prints both) in every stage of
+              `adapters/<adapter>/Dockerfile` with the hash of what is fetched (`UPSTREAM_SHA256`
+              or the lock file: `requirements.txt`, `package-lock.json`, `go.mod`/`go.sum`,
+              `Cargo.lock`), `versions.yaml` and, for opener and libplctag, `capabilities.json`;
+              `make validate` checks that they agree. Reproduce a candidate with `make images` and
+              `make candidate-<adapter> CANDIDATE_VERSION=<latest> CANDIDATE_SHA=<latest_sha>`; a
+              `failure` needs the self-test log of the run first. An upstream that fails the
+              self-tests stays a candidate: list its bug in `scripts/known-bugs.tsv`. A known case
+              that passes is noted in the self-test summary: drop its entry.
+            - **Base image:** replace the digest in every file that pins it.
+            - Record the change in `docs/COMPATIBILITY.md` and `RELEASE.md`.

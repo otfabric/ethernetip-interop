@@ -13,19 +13,21 @@ Prints key=value lines (the format of $GITHUB_OUTPUT):
     update=yes|no
     source=<where the latest upstream was looked up>
     note=<anything worth knowing about that lookup, or nothing>
+    kind=library|commit (the kind of pin, below)
 
 Two kinds of pin:
 
-- A release (libplctag, gologix, cpppo, pycomm3, pylogix, nodeeip): the latest
-  is the newest release, looked up in the upstream's git tags, PyPI or npm;
-  update = the version differs. Pre-releases are never "latest", except for
-  gologix, whose every tag is a pre-release (vX.Y.Z-beta).
-- A default-branch commit, because upstream has no (recent) release (opener,
-  eipscanner, etherip, eiprs, eeip, lokieip): the latest is the head of the
-  default branch; update = the pinned commit is not the head. The label is
-  computed the way the pin's was (git describe, crate version, assembly
-  version or Go pseudo-version), and the newest release tag, where there is
-  one, is reported in the note.
+- A release (kind library: libplctag, gologix, cpppo, pycomm3, pylogix,
+  nodeeip): the latest is the newest release, looked up in the upstream's git
+  tags, PyPI or npm; update = the version differs. Pre-releases are never
+  "latest", except for gologix, whose every tag is a pre-release
+  (vX.Y.Z-beta).
+- A default-branch commit (kind commit), because upstream has no (recent)
+  release (opener, eipscanner, etherip, eiprs, eeip, lokieip): the latest is
+  the head of the default branch; update = the pinned commit is not the head.
+  The label is computed the way the pin's was (git describe, crate version,
+  assembly version or Go pseudo-version), and the newest release tag, where
+  there is one, is reported in the note.
 
 Nothing is modified.
 """
@@ -259,6 +261,7 @@ def main():
     print(f"update={'yes' if update else 'no'}")
     print(f"source={source}")
     print(f"note={note}")
+    print(f"kind={'commit' if adapter in COMMITS else 'library'}")
 
 
 if __name__ == "__main__":

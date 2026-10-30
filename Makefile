@@ -100,7 +100,7 @@ smoke-%: FORCE ## Smoke test one adapter, e.g. smoke-opener
 selftest: ## Cross-stack self-test: every client against every server; documents and summary in reports/selftest/
 	@scripts/selftest.sh $(ADAPTERS)
 
-# ── Upstream candidates ───────────────────────────────────────────────────────
+# ── Candidates ────────────────────────────────────────────────────────────────
 # Builds one adapter on another upstream than its release pin and self-tests
 # it against the other adapters at their pins (built first: make images).
 # Every adapter Dockerfile takes its upstream as the build arguments

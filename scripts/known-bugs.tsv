@@ -1,5 +1,5 @@
 # Known bugs of specific upstream versions, for candidate builds
-# ("make candidate-<adapter>", the Upstream candidates workflow).
+# ("make candidate-<adapter>", the Upstream workflow).
 #
 # A released pin has no entry here: a pin's incompatibilities are in
 # selftest-known.tsv. An entry names an upstream version that is built as a

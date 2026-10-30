@@ -34,11 +34,12 @@ The pins live in the Dockerfiles, the Python adapters' `requirements.txt` and
 [versions.yaml](../versions.yaml); `scripts/check-versions.sh` keeps them in
 step.
 
-### Upstream candidates
+### Upstream check
 
-The **Upstream candidates** workflow (`.github/workflows/candidate.yml`)
-checks every week, and on demand, whether each pin is still the latest
-upstream (`scripts/latest-upstream.py <adapter>`):
+The **Upstream** workflow (`.github/workflows/upstream.yml`) checks every
+day, and on demand, whether each pin is still the latest upstream
+(`scripts/latest-upstream.py <adapter>`), and whether the tag of every
+digest-pinned base image has moved:
 
 - **Release pins** (libplctag, gologix, cpppo, pycomm3, pylogix, nodeeip) are
   compared with the newest release: git tags of libplctag/libplctag, PyPI, npm
@@ -54,7 +55,8 @@ upstream (`scripts/latest-upstream.py <adapter>`):
 Where a pin is behind, the adapter is built on the latest upstream as a
 candidate (`make candidate-<adapter> CANDIDATE_VERSION=<latest>
 CANDIDATE_SHA=<commit>`) and tested like a release: smoke test, then the
-cross-stack self-test against the other stacks at their pins. Every
+cross-stack self-test against the other stacks at their pins. That happens
+once per pin and latest upstream; later runs reuse the result. Every
 Dockerfile takes the upstream as `UPSTREAM_VERSION` and `UPSTREAM_SHA`; at
 the pin the release build is unchanged (archive SHA-256, `pip
 --require-hashes`, `npm ci` with the lock file, `cargo --locked`, `go mod
@@ -65,10 +67,12 @@ candidate's upstream version go in
 fails is recorded as known, so one upstream bug does not hide whether
 everything else works.
 
-The decision table (stack, where it was looked up, pin, latest, candidate
-self-test, update?) is in the run's Job Summary, and an issue "Upstream
+The pin-vs-latest table (a row per stack, of kind library or commit, and
+per base image: where it was looked up, pin, latest, status, candidate
+self-test, known bugs) is in the run's Job Summary, and an issue "Upstream
 releases: pins behind the latest" is opened or updated while any pin is
-behind, and closed once none is. Nothing is bumped automatically. To bump:
+behind (with a comment when a new version shows up), and closed once none
+is. Nothing is bumped automatically. To bump:
 move `UPSTREAM_VERSION` and `UPSTREAM_SHA` in every stage of the
 Dockerfile, with the hash of what is fetched (`UPSTREAM_SHA256`, or
 `requirements.txt`, `package-lock.json`, `go.mod`/`go.sum`, `Cargo.lock`),
