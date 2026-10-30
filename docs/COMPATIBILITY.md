@@ -96,8 +96,12 @@ Some declared features do not work between two particular references. These
 **known incompatibilities** are listed, each with its reason, in
 [scripts/selftest-known.tsv](../scripts/selftest-known.tsv) (and described in
 [CAPABILITIES.md](CAPABILITIES.md)): such a case is recorded `known` and does
-not fail the self-test; one that starts passing is reported, so that its
-entry is removed.
+not fail the self-test; one that starts passing fails the run, so that its
+entry is removed. `reports/selftest/results.json` is the run as
+[interop-result-v1](../schemas/interop-result-v1.schema.json), with these
+outcomes: pass, fail, known-difference, unsupported (n/a: a side does not
+declare it), not-tested (the fixture lacks what the case needs). A run with no
+pass fails.
 
 Run of 2026-10-26 on linux/arm64, images built from this repository
 (`make images`, tag `dev`): **186 cases passed, 0 failed, 24 known
