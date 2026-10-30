@@ -11,8 +11,10 @@
 # when the client lists the operations it needs and both sides declare the
 # features it needs; otherwise it is recorded as n/a with the reason. Every
 # result document is kept under REPORT_DIR/selftest/<client>-<server>/, the
-# outcome of every case in summary.tsv and the matrix in summary.md. The
-# documents are then checked against schemas/.
+# outcome of every case in summary.tsv, the matrix in summary.md and the run in
+# results.json (interop-result-v1: a run with no pass, or with a known
+# incompatibility that no longer reproduces, fails). The documents are then
+# checked against schemas/.
 #
 # These results are about the reference stacks, never about a consumer.
 #
@@ -32,7 +34,8 @@ OUT="${REPORT_DIR:-${ROOT}/reports}/selftest"
 rm -rf "${OUT}" && mkdir -p "${OUT}"
 SUMMARY="${OUT}/summary.tsv"
 printf 'client\tserver\tcase\tfeature\toutcome\tnote\n' > "${SUMMARY}"
-trap cleanup EXIT
+trap 'results_abort; cleanup' EXIT
+results_open selftest "${OUT}" "VERSION=${VERSION} scripts/selftest.sh ${ADAPTERS[*]}"
 network_up
 
 declare -A CAPS UPSTREAM
@@ -109,19 +112,28 @@ why_not() {
 # under test (candidate builds): "adapter<TAB>version<TAB>client<TAB>server<TAB>case<TAB>reason"
 # lines of scripts/known-bugs.tsv. A listed case that fails is recorded
 # "known" with the reason and does not fail the self-test; one that passes is
-# recorded "pass" with a note to remove the entry.
+# recorded "pass" and fails the run: the entry is stale.
 KNOWN="${SCRIPT_DIR}/selftest-known.tsv"
 KNOWN_BUGS="${SCRIPT_DIR}/known-bugs.tsv"
+# known_reason prints "<waiver id>\t<scope>\t<evidence>\t<reason>".
 known_reason() {
     local reason=""
-    [[ -f "${KNOWN}" ]] && reason=$(awk -F'\t' -v c="$1" -v s="$2" -v k="$3" '!/^#/ && $1 == c && $2 == s && $3 == k {print $4; exit}' "${KNOWN}")
+    [[ -f "${KNOWN}" ]] && reason=$(awk -F'\t' -v c="$1" -v s="$2" -v k="$3" -v OFS='\t' '!/^#/ && $1 == c && $2 == s && $3 == k {print $5, $6, $7, $4; exit}' "${KNOWN}")
     [[ -z "${reason}" && -f "${KNOWN_BUGS}" ]] && reason=$(awk -F'\t' -v c="$1" -v s="$2" -v k="$3" \
         -v cv="${UPSTREAM[$1]}" -v sv="${UPSTREAM[$2]}" '
         !/^#/ && NF >= 6 && (($1 == c && $2 == cv) || ($1 == s && $2 == sv)) \
             && ($3 == "*" || $3 == c) && ($4 == "*" || $4 == s) && ($5 == "*" || $5 == k) {
-            printf "known bug of %s %s: %s\n", $1, $2, $6; exit
+            printf "%s-%s-%s\t%s\t%s\tknown bug of %s %s: %s\n", $1, $2, k, $1, $7, $1, $2, $6; exit
         }' "${KNOWN_BUGS}")
     [[ -z "${reason}" ]] || echo "${reason}"
+}
+
+# waiver_ran <known_reason line> <true|false: it reproduced>: a waiver that
+# reproduced for one pairing stays reproduced.
+declare -A WAIVERS
+waiver_ran() {
+    local id="${1%%$'\t'*}"
+    [[ "${WAIVERS[${id}]:-}" == *$'\t'true ]] || WAIVERS[${id}]="$1"$'\t'"$2"
 }
 
 # op <args...>: runs one client operation of CLIENT against HOST, keeps the
@@ -284,6 +296,7 @@ for SERVER in "${SERVERS[@]}"; do
     FX=$(jq -c . "${ROOT}/fixtures/${fixture}/fixture.json")
     name=$(start_server "${SERVER}")
     if ! wait_ready "${name}"; then
+        RESULT_ID=""
         fail "${SERVER} did not become ready"
         continue
     fi
@@ -295,9 +308,12 @@ for SERVER in "${SERVERS[@]}"; do
         for c in "${CASES[@]}"; do
             IFS='|' read -r CASE feature ops cfeat sfeat <<<"${c}"
             N=0 NOTE=""
+            RESULT_FEATURE="${feature}"
+            at "selftest.${CASE}" "${CLIENT}" "${SERVER}"
             reason=$(why_not "${CLIENT}" "${SERVER}" "${ops}" "${cfeat}" "${sfeat}")
             if [[ -n "${reason}" ]]; then
                 NA=$((NA + 1))
+                result unsupported "${reason}"
                 printf '%s\t%s\t%s\t%s\tn/a\t%s\n' "${CLIENT}" "${SERVER}" "${CASE}" "${feature}" "${reason}" >> "${SUMMARY}"
                 continue
             fi
@@ -310,16 +326,19 @@ for SERVER in "${SERVERS[@]}"; do
                 rc=1
                 stop_server "${name}"
                 name=$(start_server "${SERVER}")
-                wait_ready "${name}" || { fail "${SERVER} did not become ready again"; break 2; }
+                wait_ready "${name}" || { RESULT_ID=""; fail "${SERVER} did not become ready again"; break 2; }
                 HOST=$(ip_of "${name}")
             fi
             known=$(known_reason "${CLIENT}" "${SERVER}" "${CASE}")
             case ${rc} in
             0) ok "${CLIENT} -> ${SERVER}: ${CASE}"; outcome=pass
-               [[ -n "${known}" ]] && { NOTE="listed in selftest-known.tsv or known-bugs.tsv but passed: remove the entry; ${NOTE}"; log "${CLIENT} -> ${SERVER}: ${CASE} passed although listed as known"; } ;;
-            2) NA=$((NA + 1)); outcome=n/a ;;
+               [[ -n "${known}" ]] && { waiver_ran "${known}" false; NOTE="listed in selftest-known.tsv or known-bugs.tsv but passed: remove the entry; ${NOTE}"; log "${CLIENT} -> ${SERVER}: ${CASE} passed although listed as known"; } ;;
+            2) NA=$((NA + 1)); outcome=n/a; result not-tested "${NOTE}" ;;
             *) if [[ -n "${known}" ]]; then
-                   KNOWN_N=$((KNOWN_N + 1)); outcome=known; NOTE="${known} (${NOTE})"
+                   KNOWN_N=$((KNOWN_N + 1)); outcome=known; waiver_ran "${known}" true
+                   IFS=$'\t' read -r waiver_id _ _ known_text <<<"${known}"
+                   result known-difference "${known_text} (${NOTE})" "${waiver_id}"
+                   NOTE="${known_text} (${NOTE})"
                else
                    fail "${CLIENT} -> ${SERVER}: ${CASE}: ${NOTE}"; outcome=fail
                fi ;;
@@ -359,6 +378,18 @@ done
 } > "${OUT}/summary.md"
 log "summary: ${OUT}/summary.md"
 
+# ---- a known incompatibility that no longer shows is a stale entry ----
+RESULT_FEATURE=""
+for id in "${!WAIVERS[@]}"; do
+    IFS=$'\t' read -r _ scope evidence _ reproduced <<<"${WAIVERS[${id}]}"
+    waiver "${id}" "${scope}" "${evidence}" "${reproduced}"
+    if [[ "${reproduced}" != true ]]; then
+        at waiver.stale
+        fail "${id} no longer reproduces: remove it from scripts/selftest-known.tsv or scripts/known-bugs.tsv"
+    fi
+done
+
+results_close || FAIL=$((FAIL + 1))
 if validate_documents "${OUT}" >"${OUT}/schema-check.txt" 2>&1; then ok "documents match schemas/"
 else fail "documents do not match schemas/: $(cat "${OUT}/schema-check.txt")"; fi
 

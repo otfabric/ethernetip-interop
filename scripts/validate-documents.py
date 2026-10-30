@@ -5,7 +5,8 @@
 Every *.json under the given directories (default: reports) that is a
 capability document (it has "clientOperations") is checked against
 schemas/capabilities.schema.json; every client result document (it has
-"operation") against schemas/client-result.schema.json. Other files are
+"operation") against schemas/client-result.schema.json; results.json (it has
+"repository") against schemas/interop-result-v1.schema.json. Other files are
 ignored.
 
 Usage: validate-documents.py [DIR ...]
@@ -25,7 +26,8 @@ def main(argv):
         print("the jsonschema package is required (pip install jsonschema)", file=sys.stderr)
         return 1
     validators = {}
-    for kind, name in (("capabilities", "capabilities.schema.json"), ("result", "client-result.schema.json")):
+    for kind, name in (("capabilities", "capabilities.schema.json"), ("result", "client-result.schema.json"),
+                       ("interop", "interop-result-v1.schema.json")):
         schema = json.loads((ROOT / "schemas" / name).read_text())
         jsonschema.Draft202012Validator.check_schema(schema)
         validators[kind] = jsonschema.Draft202012Validator(schema)
@@ -41,7 +43,8 @@ def main(argv):
                 continue
             if not isinstance(doc, dict):
                 continue
-            kind = "capabilities" if "clientOperations" in doc else "result" if "operation" in doc else None
+            kind = ("capabilities" if "clientOperations" in doc else "result" if "operation" in doc
+                    else "interop" if "repository" in doc else None)
             if kind is None:
                 continue
             checked += 1

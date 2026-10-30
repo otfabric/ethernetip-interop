@@ -22,8 +22,10 @@ NA=0
 KNOWN_N=0
 
 log()  { echo "[$(basename "$0" .sh)] $*" >&2; }
-ok()   { PASS=$((PASS + 1)); [[ -n "${VERBOSE:-}" ]] && log "ok: $*"; return 0; }
-fail() { FAIL=$((FAIL + 1)); log "FAIL: $*"; return 0; }
+# shellcheck source=scripts/results.sh
+source "$(dirname "${BASH_SOURCE[0]}")/results.sh"
+ok()   { PASS=$((PASS + 1)); result pass; [[ -n "${VERBOSE:-}" ]] && log "ok: $*"; return 0; }
+fail() { FAIL=$((FAIL + 1)); result fail "$*"; log "FAIL: $*"; return 0; }
 
 image_of() { echo "${REGISTRY}/ethernetip-interop-$1:${VERSION}"; }
 
@@ -114,5 +116,6 @@ finish() {
     [[ "${KNOWN_N}" -gt 0 ]] && extra=", ${KNOWN_N} known incompatibilities"
     [[ "${NA}" -gt 0 ]] && extra="${extra}, ${NA} not applicable"
     log "${PASS} passed, ${FAIL} failed${extra}"
-    [[ "${FAIL}" -eq 0 ]]
+    results_close || FAIL=$((FAIL + 1))
+    [[ "${FAIL}" -eq 0 && "${PASS}" -gt 0 ]]
 }
