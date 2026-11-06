@@ -1,6 +1,6 @@
 # Plan
 
-Status as of 2026-11-06 (v0.8.0).
+Status as of 2026-11-06 (v0.8.1).
 
 | Phase | Scope | Status |
 |-------|-------|--------|
@@ -35,10 +35,6 @@ Status as of 2026-11-06 (v0.8.0).
   ([cB-Sigma/enip#1–#8](https://github.com/cB-Sigma/enip/issues)), move the pin
   (the Upstream workflow builds it as a candidate) and remove the entries
   that stop reproducing.
-- The `otfabric -> cbsigma` Class 1 entries: reword them to
-  [cB-Sigma/enip#8](https://github.com/cB-Sigma/enip/issues/8) (#27) once the own
-  image is built on a go-ethernetip release with the configuration instance in
-  the path (otfabric/go-ethernetip#21); drop them if they pass.
 - Self-test coverage still without a peer: Read-Modify-Write and structure or
   STRING writes (no reference server has them), Get_Attribute_List,
   ListInterfaces and the TCP/IP and Ethernet Link objects (no reference client

@@ -321,8 +321,7 @@ reported upstream. The pairings they fail are listed in
 
 ### Own stack
 
-Seen with the own image (`ethernetip-interop-otfabric`, go-ethernetip v0.5.0)
-against `cbsigma`:
+Seen with the own image (`ethernetip-interop-otfabric`) against `cbsigma`:
 
 - `tag-list` reported a structure tag's type as the library's type string
   (`struct 0x100`) rather than the template's name, and an array's type with
@@ -330,15 +329,14 @@ against `cbsigma`:
   type is the element type, and a structure's is its template's name, read
   from the Template object (`Motor`; the built-in STRING is `ASCIISTRING82`,
   as the controller names it).
-- With no configuration assembly (`--config 0`) go-ethernetip v0.5.0 leaves
-  the configuration instance out of the Class 1 path; cB-Sigma's server
-  requires it (0x0315). Every other originator sends it (EEIP.NET, eeip.py,
-  python-ethernetip, cB-Sigma's enip; EIPScanner takes the path from its
-  caller), so go-ethernetip does too from its next release
+- With no configuration assembly (`--config 0`) go-ethernetip up to v0.5.0
+  left the configuration instance out of the Class 1 path, which cB-Sigma's
+  server refuses (0x0315). Every other originator sends it (EEIP.NET,
+  eeip.py, python-ethernetip, cB-Sigma's enip; EIPScanner takes the path from
+  its caller), and so does go-ethernetip from v0.5.1
   ([otfabric/go-ethernetip#21](https://github.com/otfabric/go-ethernetip/pull/21)).
-  With it the connection opens, but cB-Sigma's server then drops it after a
-  few packets: go-ethernetip repeats the CIP sequence count for unchanged
-  data, and cB-Sigma resets its timer only on a new one
+  The connection now opens, but cB-Sigma's server drops it after a few
+  packets: go-ethernetip repeats the CIP sequence count for unchanged data,
+  and cB-Sigma resets its timer only on a new one
   ([cB-Sigma/enip#8](https://github.com/cB-Sigma/enip/issues/8), #27). The
-  waiver of `otfabric -> cbsigma` I/O stays, with its reason moved to that
-  issue once the own image is built on that release.
+  `otfabric -> cbsigma` I/O cases are known differences for that reason.

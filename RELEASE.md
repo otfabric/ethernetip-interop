@@ -27,6 +27,21 @@ manual workflow and no releases (`own/go-ethernetip/README.md`).
 
 ---
 
+## v0.8.1
+
+**Date:** 2026-11-06
+**Previous release:** v0.8.0
+
+### Changed
+
+- The own image's adapter (`own/go-ethernetip`, built by hand, not in this release) reports a tag's type in `tag-list` as its element type, a structure's as its template's name, read from the Template object (`Motor`), as pycomm3, libplctag, gologix, node-ethernet-ip and cbsigma do. The two `tag-list-structures` waivers of the own image are gone: the **Own stack** workflow runs this release's self-tests, and v0.8.0's still listed them.
+- The `otfabric -> cbsigma` Class 1 waivers cite [cB-Sigma/enip#8](https://github.com/cB-Sigma/enip/issues/8) (#27): with go-ethernetip v0.5.1 the scanner sends the configuration instance and the connection opens, but cB-Sigma resets its inactivity timer only on a new CIP sequence count and drops it after a few packets.
+- Documentation: the cross-stack matrix of the thirteen references in `docs/COMPATIBILITY.md` (328 passed, 0 failed, 86 known), cB-Sigma/enip#8 in the findings and in `docs/CAPABILITIES.md`, `PLAN.md` brought up to date.
+
+The reference images are unchanged in content (same pins); they are rebuilt and published as `v0.8.1`.
+
+---
+
 ## v0.8.0
 
 **Date:** 2026-11-06
