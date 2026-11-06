@@ -173,13 +173,6 @@ func parseClientArgs(op string, argv []string) (*clientArgs, error) {
 		if len(a.tags) == 0 {
 			return nil, errors.New("--tags is required")
 		}
-	case "write-tag":
-		if a.tag == "" || a.typ == "" {
-			return nil, errors.New("--tag and --type are required")
-		}
-		if _, err := encodeValue(a.typ, a.values); err != nil {
-			return nil, err
-		}
 	}
 	return a, nil
 }
@@ -214,80 +207,6 @@ var typeSizes = map[types.UInt]int{
 	eip.UDINT: 4, eip.ULINT: 8, eip.REAL: 4, eip.LREAL: 8,
 }
 
-// encodeValue turns the one value of --values into the octets of a Write
-// Tag (little-endian), or a STRING's text into its characters.
-func encodeValue(typ, text string) ([]byte, error) {
-	if typ == "STRING" {
-		return []byte(text), nil
-	}
-	if typ == "JSON" {
-		return nil, errors.New("--type JSON: go-ethernet-ip writes no structures (only STRING)")
-	}
-	if _, ok := cipTypes[typ]; !ok {
-		return nil, fmt.Errorf("--type %q", typ)
-	}
-	if text == "" {
-		return nil, errors.New("--values is required")
-	}
-	if strings.Contains(text, ",") {
-		return nil, errors.New("--values: go-ethernet-ip writes a tag whole; the adapter writes scalar tags only, one value")
-	}
-	p := strings.TrimSpace(text)
-	var v any
-	var err error
-	switch typ {
-	case "BOOL":
-		switch strings.ToLower(p) {
-		case "1", "true":
-			v = uint8(1)
-		case "0", "false":
-			v = uint8(0)
-		default:
-			err = errors.New("not a BOOL")
-		}
-	case "REAL":
-		var f float64
-		f, err = strconv.ParseFloat(p, 32)
-		v = float32(f)
-	case "LREAL":
-		v, err = strconv.ParseFloat(p, 64)
-	case "SINT":
-		var n int64
-		n, err = strconv.ParseInt(p, 0, 8)
-		v = int8(n)
-	case "INT":
-		var n int64
-		n, err = strconv.ParseInt(p, 0, 16)
-		v = int16(n)
-	case "DINT":
-		var n int64
-		n, err = strconv.ParseInt(p, 0, 32)
-		v = int32(n)
-	case "LINT":
-		v, err = strconv.ParseInt(p, 0, 64)
-	case "USINT":
-		var n uint64
-		n, err = strconv.ParseUint(p, 0, 8)
-		v = uint8(n)
-	case "UINT":
-		var n uint64
-		n, err = strconv.ParseUint(p, 0, 16)
-		v = uint16(n)
-	case "UDINT":
-		var n uint64
-		n, err = strconv.ParseUint(p, 0, 32)
-		v = uint32(n)
-	case "ULINT":
-		v, err = strconv.ParseUint(p, 0, 64)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("--values %q: %v", p, err)
-	}
-	var b bytes.Buffer
-	_ = binary.Write(&b, binary.LittleEndian, v)
-	return b.Bytes(), nil
-}
-
 type result map[string]any
 
 func newResult(op string) result {
@@ -314,7 +233,9 @@ var errTimeout = errors.New("no reply within the timeout")
 // errPanic: go-ethernet-ip panicked on a reply it could not parse.
 type errPanic struct{ v any }
 
-func (e errPanic) Error() string { return fmt.Sprintf("go-ethernet-ip could not parse the reply: %v", e.v) }
+func (e errPanic) Error() string {
+	return fmt.Sprintf("go-ethernet-ip could not parse the reply: %v", e.v)
+}
 
 // errorCode classifies an error for the result document.
 func errorCode(err error) string {
@@ -437,8 +358,6 @@ func runClient(op string, argv []string) int {
 		return readTag(s, a, r)
 	case "read-tags":
 		return readTags(s, a, r)
-	case "write-tag":
-		return writeTag(s, a, r)
 	case "tag-list":
 		return tagList(s, r)
 	}
@@ -823,40 +742,6 @@ func readTags(s *session, a *clientArgs, r result) int {
 		}
 	}
 	r["results"] = results
-	return r.done()
-}
-
-// writeTag writes a scalar tag of the tag list with go-ethernet-ip's Write
-// (Write Tag by instance, of the type in the tag list): the value's octets
-// through SetString / SetInt32, which only store them. A STRING tag is
-// written as go-ethernet-ip does: LEN and DATA members in one Multiple
-// Service Packet.
-func writeTag(s *session, a *clientArgs, r result) int {
-	value, _ := encodeValue(a.typ, a.values)
-	tags, err := allTags(s)
-	if err != nil {
-		return r.fail(errorCode(err), fmt.Errorf("tag list: %w", err))
-	}
-	t := lookup(tags, a.tag)
-	if t == nil {
-		return r.fail("failed", fmt.Errorf("%s is not in the tag list: go-ethernet-ip writes tags by instance", a.tag))
-	}
-	if len(tagDims(t)) > 0 {
-		return r.fail("failed", fmt.Errorf("%s is an array: go-ethernet-ip writes it whole, with its dimension bits in the type", a.tag))
-	}
-	if got := typeName(t.Type); got != a.typ {
-		return r.fail("failed", fmt.Errorf("%s is %v in the tag list, not %s", a.tag, got, a.typ))
-	}
-	if a.typ == "DINT" {
-		t.SetInt32(int32(binary.LittleEndian.Uint32(value)))
-	} else {
-		t.SetString(string(value))
-	}
-	if err := s.call(t.Write); err != nil {
-		return r.fail(errorCode(err), err)
-	}
-	// go-ethernet-ip discards the reply of a write: a reply is success.
-	r["status"], r["errorText"] = 0, nil
 	return r.done()
 }
 

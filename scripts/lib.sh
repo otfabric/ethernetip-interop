@@ -27,7 +27,12 @@ source "$(dirname "${BASH_SOURCE[0]}")/results.sh"
 ok()   { PASS=$((PASS + 1)); result pass; [[ -n "${VERBOSE:-}" ]] && log "ok: $*"; return 0; }
 fail() { FAIL=$((FAIL + 1)); result fail "$*"; log "FAIL: $*"; return 0; }
 
-image_of() { echo "${REGISTRY}/ethernetip-interop-$1:${VERSION}"; }
+# image_of <adapter>: ADAPTER_IMAGE_<adapter> names an image outside the release
+# set, which this repository's scripts know nothing about.
+image_of() {
+    local override="ADAPTER_IMAGE_$1"
+    if [[ -n "${!override:-}" ]]; then echo "${!override}"; else echo "${REGISTRY}/ethernetip-interop-$1:${VERSION}"; fi
+}
 
 require_tools() {
     local t

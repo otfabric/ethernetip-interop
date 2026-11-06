@@ -4,19 +4,21 @@
 # Cross-stack self-test: every client image against every server image, on a
 # private Docker network, for the operations both declare.
 #
-# Usage: selftest.sh [adapter ...]     default: the Makefile's ADAPTERS
+# Usage: interop.sh [adapter ...]     default: the Makefile's ADAPTERS
 #
 # Each server serves its first fixture (print-capabilities .fixtures[0]); the
 # expected values come from that fixture in this repository. A case runs
 # when the client lists the operations it needs and both sides declare the
 # features it needs; otherwise it is recorded as n/a with the reason. Every
-# result document is kept under REPORT_DIR/selftest/<client>-<server>/, the
+# result document is kept under REPORT_DIR/interop/<client>-<server>/, the
 # outcome of every case in summary.tsv, the matrix in summary.md and the run in
 # results.json (interop-result-v1: a run with no pass, or with a known
 # incompatibility that no longer reproduces, fails). The documents are then
 # checked against schemas/.
 #
-# These results are about the reference stacks, never about a consumer.
+# These results are about the stacks of the images it runs: the references,
+# and an image named by ADAPTER_IMAGE_<adapter> (scripts/lib.sh), never a
+# consumer's test code.
 #
 # Environment: REGISTRY, VERSION (image tag, default dev), VERBOSE=1,
 #              REPORT_DIR (default reports).
@@ -30,12 +32,12 @@ source "${SCRIPT_DIR}/lib.sh"
 ADAPTERS=("$@")
 [[ ${#ADAPTERS[@]} -gt 0 ]] || read -r -a ADAPTERS <<<"$(make -s -C "${ROOT}" print-adapters)"
 require_tools
-OUT="${REPORT_DIR:-${ROOT}/reports}/selftest"
+OUT="${REPORT_DIR:-${ROOT}/reports}/interop"
 rm -rf "${OUT}" && mkdir -p "${OUT}"
 SUMMARY="${OUT}/summary.tsv"
 printf 'client\tserver\tcase\tfeature\toutcome\tnote\n' > "${SUMMARY}"
 trap 'results_abort; cleanup' EXIT
-results_open selftest "${OUT}" "VERSION=${VERSION} scripts/selftest.sh ${ADAPTERS[*]}"
+results_open interop "${OUT}" "VERSION=${VERSION} scripts/interop.sh ${ADAPTERS[*]}"
 network_up
 
 declare -A CAPS UPSTREAM
@@ -44,37 +46,21 @@ for a in "${ADAPTERS[@]}"; do
     CAPS[$a]=$(capabilities "$a")
     [[ -n "${CAPS[$a]}" ]] || { log "no capability document from $(image_of "$a")"; exit 2; }
     UPSTREAM[$a]=$(jq -r '.upstream.version' <<<"${CAPS[$a]}")
+    implementation "$a" <(printf '%s\n' "${CAPS[$a]}")
     jq -e '.roles.server' <<<"${CAPS[$a]}" >/dev/null && SERVERS+=("$a")
     jq -e '.roles.client' <<<"${CAPS[$a]}" >/dev/null && CLIENTS+=("$a")
 done
 log "servers: ${SERVERS[*]:-none}; clients: ${CLIENTS[*]:-none}"
 log "upstreams: $(for a in "${ADAPTERS[@]}"; do printf '%s %s; ' "$a" "${UPSTREAM[$a]}"; done)"
 
-# The cases: id | feature | client operations | client features | server features.
-# "logix" in the server column means: logixTags, and tagList as well when
-# the client declares tagList (such a client, pycomm3's LogixDriver, uploads
-# the tag list before it reads or writes a tag).
-CASES=(
-    "list-identity-tcp|ListIdentity (TCP)|list-identity|listIdentityTcp|listIdentityTcp"
-    "list-identity-udp|ListIdentity (UDP)|list-identity|listIdentityUdp|listIdentityUdp"
-    "list-services|ListServices|list-services|listServices|listServices"
-    "get-attribute|Get_Attribute_Single|get-attribute|getAttributeSingle|getAttributeSingle"
-    "get-attributes-all|Get_Attributes_All (Identity)|get-attributes-all|getAttributesAll|getAttributesAll"
-    "set-attribute|Set_Attribute_Single (assembly data)|set-attribute get-attribute|setAttributeSingle getAttributeSingle|setAttributeSingle getAttributeSingle"
-    "error-status|Error status (unknown attribute)|get-attribute|getAttributeSingle|getAttributeSingle"
-    "multiple-get|Multiple Service Packet|multiple-get|multipleService|multipleService getAttributeSingle"
-    "class3|Class 3 connected explicit messaging|get-attribute|class3|class3 getAttributeSingle"
-    "identity|identity operation|identity||identity"
-    "io-exclusive-owner|Class 1 I/O, exclusive owner|io|class1|class1"
-    "io-large|Class 1 I/O, Large_Forward_Open|io|class1 largeForwardOpen|class1 largeForwardOpen"
-    "io-input-only|Class 1 I/O, input only|io|class1 inputOnly|class1 inputOnly"
-    "io-refused|Forward_Open refusal (connection size)|io|class1|class1"
-    "io-config-data|Class 1 I/O, configuration data|io get-attribute|class1 configData getAttributeSingle|class1 configData getAttributeSingle"
-    "logix-read|Logix Read Tag (atomic types)|read-tags|logixTags|logix"
-    "logix-fragmented|Logix Read Tag Fragmented|read-tag|readTagFragmented|logix readTagFragmented"
-    "logix-write|Logix Write Tag|write-tag read-tag|logixTags|logix"
-    "tag-list|Logix tag list|tag-list|tagList|tagList"
-)
+# The cases: tests/cases.tsv.
+CASES=()
+while IFS=$'\t' read -r id feature ops cfeat sfeat; do
+    [[ -z "${id}" || "${id}" == \#* ]] && continue
+    [[ "${cfeat}" == - ]] && cfeat=""
+    [[ "${sfeat}" == - ]] && sfeat=""
+    CASES+=("${id}|${feature}|${ops}|${cfeat}|${sfeat}")
+done < "${ROOT}/tests/cases.tsv"
 
 has_feature() { jq -e --arg f "$2" --arg k "$3Features" '.[$k][$f] == true' <<<"${CAPS[$1]}" >/dev/null 2>&1; }
 has_op() { jq -e --arg o "$2" '.clientOperations | index($o)' <<<"${CAPS[$1]}" >/dev/null 2>&1; }
@@ -108,13 +94,13 @@ why_not() {
 }
 
 # Known incompatibilities between reference stacks: "client<TAB>server<TAB>case<TAB>reason"
-# lines of scripts/selftest-known.tsv, and known bugs of the upstream versions
+# lines of tests/known-differences.tsv, and known bugs of the upstream versions
 # under test (candidate builds): "adapter<TAB>version<TAB>client<TAB>server<TAB>case<TAB>reason"
-# lines of scripts/known-bugs.tsv. A listed case that fails is recorded
+# lines of tests/known-bugs.tsv. A listed case that fails is recorded
 # "known" with the reason and does not fail the self-test; one that passes is
 # recorded "pass" and fails the run: the entry is stale.
-KNOWN="${SCRIPT_DIR}/selftest-known.tsv"
-KNOWN_BUGS="${SCRIPT_DIR}/known-bugs.tsv"
+KNOWN="${ROOT}/tests/known-differences.tsv"
+KNOWN_BUGS="${ROOT}/tests/known-bugs.tsv"
 # known_reason prints "<waiver id>\t<scope>\t<evidence>\t<reason>".
 known_reason() {
     local reason=""
@@ -309,7 +295,7 @@ for SERVER in "${SERVERS[@]}"; do
             IFS='|' read -r CASE feature ops cfeat sfeat <<<"${c}"
             N=0 NOTE=""
             RESULT_FEATURE="${feature}"
-            at "selftest.${CASE}" "${CLIENT}" "${SERVER}"
+            at "interop.${CASE}" "${CLIENT}" "${SERVER}"
             reason=$(why_not "${CLIENT}" "${SERVER}" "${ops}" "${cfeat}" "${sfeat}")
             if [[ -n "${reason}" ]]; then
                 NA=$((NA + 1))
@@ -332,7 +318,7 @@ for SERVER in "${SERVERS[@]}"; do
             known=$(known_reason "${CLIENT}" "${SERVER}" "${CASE}")
             case ${rc} in
             0) ok "${CLIENT} -> ${SERVER}: ${CASE}"; outcome=pass
-               [[ -n "${known}" ]] && { waiver_ran "${known}" false; NOTE="listed in selftest-known.tsv or known-bugs.tsv but passed: remove the entry; ${NOTE}"; log "${CLIENT} -> ${SERVER}: ${CASE} passed although listed as known"; } ;;
+               [[ -n "${known}" ]] && { waiver_ran "${known}" false; NOTE="listed in known-differences.tsv or known-bugs.tsv but passed: remove the entry; ${NOTE}"; log "${CLIENT} -> ${SERVER}: ${CASE} passed although listed as known"; } ;;
             2) NA=$((NA + 1)); outcome=n/a; result not-tested "${NOTE}" ;;
             *) if [[ -n "${known}" ]]; then
                    KNOWN_N=$((KNOWN_N + 1)); outcome=known; waiver_ran "${known}" true
@@ -355,7 +341,7 @@ done
     echo
     echo "Images: $(for a in "${ADAPTERS[@]}"; do printf '%s ' "$(image_of "$a")"; done)"
     echo
-    echo "pass: the case passed; fail: it failed; known: a known incompatibility between the two reference stacks (scripts/selftest-known.tsv) or a known bug of a candidate upstream version (scripts/known-bugs.tsv), reason in the notes; n/a: one side does not declare what the case needs."
+    echo "pass: the case passed; fail: it failed; known: a known incompatibility between the two reference stacks (tests/known-differences.tsv) or a known bug of a candidate upstream version (tests/known-bugs.tsv), reason in the notes; n/a: one side does not declare what the case needs."
     for s in "${SERVERS[@]}"; do
         echo
         echo "## Server ${s}"
@@ -385,7 +371,7 @@ for id in "${!WAIVERS[@]}"; do
     waiver "${id}" "${scope}" "${evidence}" "${reproduced}"
     if [[ "${reproduced}" != true ]]; then
         at waiver.stale
-        fail "${id} no longer reproduces: remove it from scripts/selftest-known.tsv or scripts/known-bugs.tsv"
+        fail "${id} no longer reproduces: remove it from tests/known-differences.tsv or tests/known-bugs.tsv"
     fi
 done
 

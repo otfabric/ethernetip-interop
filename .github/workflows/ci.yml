@@ -58,12 +58,12 @@ jobs:
         # REQUIREMENTS.md R1: adapters, fixtures, scripts and schemas must not
         # know any consumer. Documentation may name consumers as examples.
         run: |
-          if grep -rInE 'go-ethernetip|otfabric/go-' adapters fixtures schemas scripts Makefile compose.yaml; then
+          if grep -rInE 'go-ethernetip|ethernetipctl|otfabric/go-' adapters fixtures schemas scripts tests Makefile compose.yaml; then
             echo "::error::consumer-specific reference found"; exit 1
           fi
 
   # Built and self-tested natively on both architectures: no emulation.
-  selftest:
+  interop:
     name: Build, smoke, cross-stack (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
@@ -100,11 +100,11 @@ jobs:
         run: make smoke
 
       - name: Cross-stack self-test
-        run: make selftest
+        run: make interop
 
       - name: Self-test summary
         if: always()
-        run: cat reports/selftest/summary.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+        run: cat reports/interop/summary.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
 
       - name: Collect container logs on failure
         if: failure()
@@ -118,6 +118,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: selftest-documents-${{ matrix.arch }}
+          name: interop-documents-${{ matrix.arch }}
           path: reports/
           if-no-files-found: ignore

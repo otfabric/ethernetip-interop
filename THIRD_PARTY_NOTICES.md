@@ -2,7 +2,9 @@
 
 The images built from this repository contain third-party software. This
 file is copied into every image as `/licenses/THIRD_PARTY_NOTICES.md`, next
-to the licence texts. All four images are published.
+to the licence texts. Every reference image is published; the image
+`ethernetip-interop-otfabric` is published apart from the releases
+(`own/go-ethernetip/README.md`).
 
 ## What is licensed how
 
@@ -14,6 +16,8 @@ to the licence texts. All four images are published.
 | `adapters/pycomm3/` (imports pycomm3) | MIT |
 | `adapters/cpppo/` (imports cpppo) | GPL-3.0-or-later ([adapters/LICENSE](adapters/LICENSE)) |
 | `adapters/libplctag/` (links libplctag), `adapters/gologix/` (links gologix), `adapters/pylogix/`, `adapters/etherip/`, `adapters/eiprs/`, `adapters/nodeeip/`, `adapters/eeip/`, `adapters/lokieip/` (links go-ethernet-ip) | MIT |
+| `own/go-ethernetip/` (links go-ethernetip) | MIT |
+| Image `ethernetip-interop-otfabric` | MIT and BSD-3-Clause, as listed below |
 | Image `ethernetip-interop-opener` | MIT and the OpENer licence (adapted BSD, see below), and the licences of the Debian packages |
 | Image `ethernetip-interop-eipscanner` | MIT, and the licences of the Debian packages |
 | Image `ethernetip-interop-pycomm3` | MIT, and the Python licence |
@@ -36,6 +40,15 @@ protocols it implements.
 
 The cpppo adapter is a derivative work of the GPL-3.0 cpppo and carries
 `SPDX-License-Identifier: GPL-3.0-or-later`; the other adapters are MIT.
+
+## Image `ethernetip-interop-otfabric`
+
+| Component | Version | Licence | Source |
+|-----------|---------|---------|--------|
+| go-ethernetip | latest release when built | MIT | https://github.com/otfabric/go-ethernetip |
+| Go standard library | 1.27.3 | BSD-3-Clause | https://go.dev |
+| Adapter | this repository, `own/go-ethernetip/` | MIT | https://github.com/otfabric/ethernetip-interop |
+| Base system | Debian trixie-slim | various; see `/usr/share/doc/*/copyright` in the image | https://www.debian.org |
 
 ## Image `ethernetip-interop-opener`
 

@@ -49,6 +49,7 @@ Each image says what it supports (`print-capabilities`); see
 
 - [What this repository is, and is not](#what-this-repository-is-and-is-not)
 - [Quick start](#quick-start)
+- [OT Fabric's own stack](#ot-fabrics-own-stack)
 - [Using the images from a library's tests](#using-the-images-from-a-librarys-tests)
 - [Repository layout](#repository-layout)
 - [Development](#development)
@@ -61,7 +62,8 @@ It owns the reference implementations, their adapters, the fixtures, the
 container contract, the images and the self-tests that show the references
 agree with each other.
 
-It does not contain, import, build or know about any library under test.
+It does not contain, import, build or know about any library under test, apart
+from [one image](#ot-fabrics-own-stack) kept out of its releases.
 [otfabric/go-ethernetip](https://github.com/otfabric/go-ethernetip) is a
 consumer: it pulls the images and owns its own scenarios, assertions and
 compatibility claims. A passing self-test here says the *references*
@@ -77,7 +79,7 @@ Needs Docker and `jq`.
 ```sh
 make images      # build the four adapter images for this machine
 make smoke       # container contract of each image
-make selftest    # every client against every server
+make interop     # every client against every server
 ```
 
 A reference target and a reference originator on one Docker network (images
@@ -133,6 +135,15 @@ print-capabilities   what this adapter supports, as JSON
 print-fixture        a fixture baked into the image
 version              adapter and upstream versions, as JSON
 ```
+
+## OT Fabric's own stack
+
+`ghcr.io/otfabric/ethernetip-interop-otfabric` is go-ethernetip behind the same
+contract, so you can test your stack against ours the way we test ours against
+yours. Despite the name it shares with the reference images, it is not an
+independent implementation and not part of a release of this repository, so its
+tags are go-ethernetip versions and `manifest.json` does not list it: see
+[own/go-ethernetip/README.md](own/go-ethernetip/README.md).
 
 ## Using the images from a library's tests
 
@@ -193,8 +204,10 @@ ethernetip-interop/
 │   ├── adapter/         the adapter a library under test serves
 │   ├── logix/           a Logix-style controller (cpppo)
 │   └── opener-sample/   what OpENer's sample application serves
+├── own/go-ethernetip/   OT Fabric's own stack behind the contract (not a reference, not in a release)
 ├── schemas/             JSON Schemas of the capability and client result documents
-├── scripts/             validate, smoke, cross-stack self-test, version check, latest upstream
+├── scripts/             validate, smoke, cross-stack self-test (interop.sh), version check, latest upstream
+├── tests/               cases.tsv, known-bugs.tsv (candidate upstreams), known-differences.tsv (between references)
 ├── docs/                contract, fixtures, capabilities, compatibility
 ├── licenses/            licence texts the adapters refer to
 ├── versions.yaml        every upstream pin and base image digest
@@ -214,9 +227,9 @@ scripts/latest-upstream.py opener   # an adapter's pin against the latest upstre
 make candidate-opener CANDIDATE_VERSION=<version> CANDIDATE_SHA=<commit>   # self-test an adapter on another upstream than its pin
 ```
 
-`make smoke ADAPTERS=opener` and `make selftest ADAPTERS="opener eipscanner"`
+`make smoke ADAPTERS=opener` and `make interop ADAPTERS="opener eipscanner"`
 narrow what is run; `VERBOSE=1` shows every check. The self-test keeps every
-result document under `reports/selftest/` with `summary.md` and
+result document under `reports/interop/` with `summary.md` and
 `summary.tsv`. See [CONTRIBUTING.md](CONTRIBUTING.md) for adding an adapter,
 a fixture or a client operation.
 

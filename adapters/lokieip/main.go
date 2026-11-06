@@ -100,10 +100,12 @@ func printFixture(name string) int {
 }
 
 // clientOperations are the operations "client" runs, in the order of the
-// capability document.
+// capability document. Not write-tag: go-ethernet-ip writes a tag only whole,
+// by instance, and the contract's write-tag writes elements from element 0
+// (docs/CAPABILITIES.md#lokieip).
 var clientOperations = []string{
 	"list-identity", "list-services", "get-attribute", "set-attribute", "get-attributes-all",
-	"multiple-get", "read-tag", "read-tags", "write-tag", "tag-list",
+	"multiple-get", "read-tag", "read-tags", "tag-list",
 }
 
 func hasOperation(op string) bool {

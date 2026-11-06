@@ -20,8 +20,11 @@ protocol-testing framework.
 - R1.1 This repository does not import, build, link against or depend on any
   library under test, and contains no test logic or expectation specific to
   one. In particular it knows nothing about `otfabric/go-ethernetip` outside
-  documentation examples (CI checks adapters, fixtures, schemas, scripts, the
-  Makefile and `compose.yaml`).
+  documentation examples (CI checks adapters, fixtures, schemas, scripts,
+  tests, the Makefile and `compose.yaml`). The one exception is `own/` with its
+  workflow: images of OT Fabric's own stacks, published for others to test
+  against (`own/go-ethernetip/README.md`). The rest of the repository does not
+  know them, and they are not part of a release.
 - R1.2 A consumer depends on published images and the documented contract
   only. It does not need a checkout of this repository.
 - R1.3 No third-party code from here is copied into a consumer, and the

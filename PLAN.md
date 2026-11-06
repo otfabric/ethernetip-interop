@@ -14,7 +14,7 @@ Status as of 2026-10-26.
   linux/arm64 (locally) with the same contract; see
   [docs/CAPABILITIES.md](docs/CAPABILITIES.md).
 - `make validate`, `make lint`, `make images`, `make smoke` and
-  `make selftest` pass locally on linux/arm64; results in
+  `make interop` pass locally on linux/arm64; results in
   [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 - Fixes found on the way: the cpppo server ignored the fixture's identity
   (`--no-config` disabled its `--config` too) and was killed rather than

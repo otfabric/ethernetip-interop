@@ -43,7 +43,7 @@ export REGISTRY VERSION TOOLS_REGISTRY
 
 # image-% and smoke-% are pattern rules, which make ignores for .PHONY
 # targets: they depend on FORCE instead.
-.PHONY: help all ci validate lint images smoke selftest capabilities print-adapters print-published-adapters run-opener run-cpppo buildx-setup buildx publish publish-arch publish-manifest digests clean FORCE
+.PHONY: help all ci validate documents lint images smoke interop capabilities print-adapters print-published-adapters run-opener run-cpppo buildx-setup buildx publish publish-arch publish-manifest digests clean FORCE
 FORCE:
 
 help: ## Show this help
@@ -51,7 +51,7 @@ help: ## Show this help
 
 all: validate images ## Validate fixtures and build the local images
 
-ci: validate lint images smoke selftest ## Full local CI: validate, lint, build, smoke and cross-stack self-test
+ci: validate lint images smoke interop ## Full local CI: validate, lint, build, smoke and cross-stack self-test
 	@echo ""
 	@echo "All local CI checks passed."
 
@@ -79,7 +79,7 @@ lint: ## Shellcheck the scripts and the OpENer entrypoint (the installed shellch
 			--severity=warning -x -P scripts scripts/*.sh adapters/opener/*.sh; \
 	fi
 
-# ── Local single-arch images (loaded into Docker; used by smoke and selftest) ──
+# ── Local single-arch images (loaded into Docker; used by smoke and interop) ──
 
 images: $(addprefix image-,$(ADAPTERS)) ## Build every adapter image for the host architecture
 
@@ -98,8 +98,19 @@ smoke: $(addprefix smoke-,$(ADAPTERS)) ## Container-contract smoke test of every
 smoke-%: FORCE ## Smoke test one adapter, e.g. smoke-opener
 	@scripts/smoke.sh $*
 
-selftest: ## Cross-stack self-test: every client against every server; documents and summary in reports/selftest/
-	@scripts/selftest.sh $(ADAPTERS)
+interop: ## Cross-stack self-test: every client against every server; documents and summary in reports/interop/
+	@scripts/interop.sh $(ADAPTERS)
+
+documents: ## Run the self-tests keeping every document, and validate them against schemas/
+	@rm -rf reports && mkdir -p reports
+	@REPORT_DIR=reports $(MAKE) --no-print-directory smoke interop
+	@echo "Validating documents..."
+	@if python3 -c 'import jsonschema' 2>/dev/null; then \
+		python3 scripts/validate-documents.py reports; \
+	else \
+		$(RETRY) docker run --rm -v "$(CURDIR):/work:ro" -w /work $(TOOLS_REGISTRY)/library/python:3.12-slim \
+			sh -c 'pip install -q --root-user-action=ignore --disable-pip-version-check jsonschema && python scripts/validate-documents.py reports'; \
+	fi
 
 # ── Candidates ────────────────────────────────────────────────────────────────
 # Builds one adapter on another upstream than its release pin and self-tests
@@ -109,7 +120,7 @@ selftest: ## Cross-stack self-test: every client against every server; documents
 # its upstream revision). At the pin, every hash check of the release build
 # applies; any other value takes the Dockerfile's candidate path, which says
 # "candidate build: ..." on stderr. Bugs of that upstream version listed in
-# scripts/known-bugs.tsv are reported as known, so that the run shows whether
+# tests/known-bugs.tsv are reported as known, so that the run shows whether
 # everything else works. scripts/latest-upstream.py <adapter> prints the
 # latest upstream (latest, latest_sha). Release pins are never modified.
 
@@ -127,7 +138,7 @@ candidate-%: FORCE ## Build one adapter on CANDIDATE_VERSION and CANDIDATE_SHA a
 		--file adapters/$*/Dockerfile .
 	@for a in $(filter-out $*,$(ADAPTERS)); do docker tag $(call image,$$a):$(VERSION) $(call image,$$a):candidate || exit 1; done
 	@VERSION=candidate scripts/smoke.sh $*
-	@VERSION=candidate REPORT_DIR=reports/candidate scripts/selftest.sh $(ADAPTERS)
+	@VERSION=candidate REPORT_DIR=reports/candidate scripts/interop.sh $(ADAPTERS)
 
 capabilities: ## Print the capability document of every adapter
 	@for a in $(ADAPTERS); do docker run --rm $(call image,$$a):$(VERSION) print-capabilities; done

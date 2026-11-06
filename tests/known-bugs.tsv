@@ -2,7 +2,7 @@
 # ("make candidate-<adapter>", the Upstream workflow).
 #
 # A released pin has no entry here: a pin's incompatibilities are in
-# selftest-known.tsv. An entry names an upstream version that is built as a
+# known-differences.tsv. An entry names an upstream version that is built as a
 # candidate, so that one upstream bug is reported as such instead of hiding
 # whether everything else works.
 #
@@ -11,7 +11,7 @@
 #   2  upstream version, as print-capabilities reports it (.upstream.version)
 #   3  client, or * for any
 #   4  server, or * for any
-#   5  self-test case (scripts/selftest.sh CASES), or * for any
+#   5  self-test case (tests/cases.tsv), or * for any
 #   6  what is wrong
 #   7  URL of the upstream issue or commit
 #

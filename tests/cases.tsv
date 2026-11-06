@@ -1,0 +1,30 @@
+# Cross-stack cases of scripts/interop.sh, against the fixture each server serves.
+#
+# Columns, separated by tabs ("-" for none):
+#   1  case id (scripts/interop.sh run_case; results.json id interop.<case>)
+#   2  feature, as the summary names it
+#   3  client operations the case needs, separated by spaces
+#   4  client features it needs
+#   5  server features it needs; "logix" means logixTags, and tagList as well
+#      when the client declares tagList (such a client, pycomm3's LogixDriver,
+#      uploads the tag list before it reads or writes a tag); "identity": see
+#      why_not in scripts/interop.sh
+list-identity-tcp	ListIdentity (TCP)	list-identity	listIdentityTcp	listIdentityTcp
+list-identity-udp	ListIdentity (UDP)	list-identity	listIdentityUdp	listIdentityUdp
+list-services	ListServices	list-services	listServices	listServices
+get-attribute	Get_Attribute_Single	get-attribute	getAttributeSingle	getAttributeSingle
+get-attributes-all	Get_Attributes_All (Identity)	get-attributes-all	getAttributesAll	getAttributesAll
+set-attribute	Set_Attribute_Single (assembly data)	set-attribute get-attribute	setAttributeSingle getAttributeSingle	setAttributeSingle getAttributeSingle
+error-status	Error status (unknown attribute)	get-attribute	getAttributeSingle	getAttributeSingle
+multiple-get	Multiple Service Packet	multiple-get	multipleService	multipleService getAttributeSingle
+class3	Class 3 connected explicit messaging	get-attribute	class3	class3 getAttributeSingle
+identity	identity operation	identity	-	identity
+io-exclusive-owner	Class 1 I/O, exclusive owner	io	class1	class1
+io-large	Class 1 I/O, Large_Forward_Open	io	class1 largeForwardOpen	class1 largeForwardOpen
+io-input-only	Class 1 I/O, input only	io	class1 inputOnly	class1 inputOnly
+io-refused	Forward_Open refusal (connection size)	io	class1	class1
+io-config-data	Class 1 I/O, configuration data	io get-attribute	class1 configData getAttributeSingle	class1 configData getAttributeSingle
+logix-read	Logix Read Tag (atomic types)	read-tags	logixTags	logix
+logix-fragmented	Logix Read Tag Fragmented	read-tag	readTagFragmented	logix readTagFragmented
+logix-write	Logix Write Tag	write-tag read-tag	logixTags	logix
+tag-list	Logix tag list	tag-list	tagList	tagList

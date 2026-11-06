@@ -1,4 +1,4 @@
-# Self-test documents and summaries (make smoke, make selftest)
+# Self-test documents and summaries (make smoke, make interop)
 reports/
 
 # Local build artifacts

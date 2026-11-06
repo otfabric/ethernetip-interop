@@ -120,13 +120,13 @@ jobs:
         run: |
           make -j4 --output-sync=target images
           make smoke
-          make selftest
+          make interop
 
       - name: Upload documents
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: release-selftest-${{ matrix.arch }}
+          name: release-interop-${{ matrix.arch }}
           path: reports/
           if-no-files-found: ignore
 

@@ -2,7 +2,7 @@
 
 ## What this is
 
-Independent EtherNet/IP target and originator implementations (OpENer, EIPScanner, cpppo, pycomm3, libplctag, gologix, pylogix, etherip, eip-rs, node-ethernet-ip, EEIP.NET, go-ethernet-ip) in containers behind one command-line contract, with deterministic fixtures, used as oracles by go-ethernetip and ethernetipctl. Nothing here depends on go-ethernetip. Profile: **interoperability**.
+Independent EtherNet/IP target and originator implementations (OpENer, EIPScanner, cpppo, pycomm3, libplctag, gologix, pylogix, etherip, eip-rs, node-ethernet-ip, EEIP.NET, go-ethernet-ip) in containers behind one command-line contract, with deterministic fixtures, used as oracles by go-ethernetip and ethernetipctl. Nothing here depends on go-ethernetip, except `own/`, the one image of OT Fabric's own stack (`own/go-ethernetip/README.md`). Profile: **interoperability**.
 
 ## Organisation standards
 
@@ -16,7 +16,7 @@ This repository follows **otfabric/engineering policy 1.2**, profile **interoper
 | What each stack can do | docs/CAPABILITIES.md |
 | Pins (upstream revision, source hash, base image digests) | versions.yaml, checked by `make validate` |
 | Fixtures | fixtures/, docs/FIXTURES.md |
-| Expected deviations of the stacks | scripts/known-bugs.tsv and scripts/selftest-known.tsv |
+| Expected deviations of the stacks | tests/known-bugs.tsv and tests/known-differences.tsv |
 | Results | docs/COMPATIBILITY.md |
 | What this repository must and must not do | REQUIREMENTS.md |
 | What is done and what is next | PLAN.md |
@@ -36,7 +36,7 @@ This repository follows **otfabric/engineering policy 1.2**, profile **interoper
 |---|---|
 | anything | `make validate lint` |
 | an adapter | `make image-<adapter> smoke-<adapter>` |
-| cross-stack behaviour | `make selftest` |
+| cross-stack behaviour | `make interop` |
 
 ## Git and releases
 
