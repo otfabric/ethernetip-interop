@@ -640,7 +640,10 @@ enip-sim itself (a demo tag table and a command) is not linked.
   without the instance segment is refused 0x01 / 0x0315. The sizes are
   checked (0x0127 / 0x0128). Forward_Close of a Class 1 connection is answered
   0x01 / 0x0107 and the connection runs until its timeout
-  ([#3](https://github.com/cB-Sigma/enip/issues/3)). No multicast, input-only,
+  ([#3](https://github.com/cB-Sigma/enip/issues/3)). The inactivity timer is
+  reset only by a new O->T CIP sequence count: an originator that repeats it
+  for unchanged data (go-ethernetip) is dropped after a few packets
+  ([#8](https://github.com/cB-Sigma/enip/issues/8)). No multicast, input-only,
   listen-only or configuration data. The Assembly object's attribute 3 and the
   Class 1 data are two separate stores in enip: what Set_Attribute_Single
   writes is not produced, and consumed data is not read by

@@ -84,17 +84,22 @@ and record the change in this file and in `RELEASE.md`.
 ## Cross-stack matrix
 
 `make interop` (`scripts/interop.sh`) starts each server image (opener,
-cpppo, libplctag, gologix) with its first fixture on a private Docker
-network and runs every client image against it, case by case. A case runs
-when the client has the operation and both sides declare the features it
-needs; otherwise it is n/a, with the reason in `summary.tsv`. Expected values
-come from the server's fixture. A server that a case brings down is
-restarted, and the crash is recorded against that case. Every result
-document is kept under `reports/interop/` and validated against
+cpppo, libplctag, gologix, cbsigma) with its first fixture on a private
+Docker network and runs every client image against it, case by case; a case
+that names another fixture in `tests/cases.tsv` (`tag-list-structures`:
+`logix-structures`) runs against a second container of each server that
+serves it, and is n/a for the others. A case runs when the client has the
+operation and both sides declare the features it needs; otherwise it is n/a,
+with the reason in `summary.tsv`. Expected values come from the server's
+fixture. A server that a case brings down is restarted, and the crash is
+recorded against that case; so is one after an I/O case that left its
+connection open (no successful Forward_Close). Every result document is kept
+under `reports/interop/` and validated against
 `schemas/client-result.schema.json`.
 
 Some declared features do not work between two particular references. These
-**known incompatibilities** are listed, each with its reason, in
+**known incompatibilities** are listed, each with its reason, the stack at
+fault and its source, in
 [tests/known-differences.tsv](../tests/known-differences.tsv) (and described in
 [CAPABILITIES.md](CAPABILITIES.md)): such a case is recorded `known` and does
 not fail the self-test; one that starts passing fails the run, so that its
@@ -104,131 +109,177 @@ outcomes: pass, fail, known-difference, unsupported (n/a: a side does not
 declare it), not-tested (the fixture lacks what the case needs). A run with no
 pass fails.
 
-Run of 2026-10-26 on linux/arm64, images built from this repository
-(`make images`, tag `dev`): **186 cases passed, 0 failed, 24 known
-incompatibilities, 627 n/a; 234 documents valid against the schemas.**
-`make smoke`: every adapter, none failed.
+Run of 2026-11-06 on linux/arm64, the thirteen references at the v0.8.0 pins
+(images built from this repository, tag `dev`; the v0.7.0 images for the
+other twelve, same pins): **328 cases passed, 0 failed, 86 known
+incompatibilities, 846 n/a; every document valid against the schemas.**
+`make smoke`: every adapter, none failed. (The same run with the own image,
+`ethernetip-interop-otfabric`, as a fourteenth stack: 526 passed, 0 failed, 106
+known; its pairings are not in the tables.)
 
 #### Server opener
 
-| Case | eipscanner | cpppo | pycomm3 | libplctag | gologix | pylogix | etherip | eiprs | nodeeip | eeip | lokieip |
-|------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| ListIdentity (TCP) | n/a | pass | pass | n/a | pass | n/a | known | pass | pass | n/a | pass |
-| ListIdentity (UDP) | pass | pass | pass | n/a | n/a | pass | known | pass | pass | pass | n/a |
-| ListServices | n/a | pass | n/a | n/a | pass | n/a | known | pass | n/a | n/a | pass |
-| Get_Attribute_Single | pass | pass | pass | known | pass | pass | pass | pass | pass | pass | pass |
-| Get_Attributes_All (Identity) | pass | pass | pass | known | pass | pass | pass | pass | pass | pass | pass |
-| Set_Attribute_Single (assembly data) | pass | pass | pass | known | pass | pass | n/a | pass | pass | pass | pass |
-| Error status (unknown attribute) | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass |
-| Multiple Service Packet | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Class 3 connected explicit messaging | n/a | n/a | pass | pass | pass | n/a | n/a | pass | known | n/a | known |
-| identity operation | pass | n/a | n/a | pass | n/a | n/a | n/a | n/a | pass | pass | n/a |
-| Class 1 I/O, exclusive owner | pass | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | pass | n/a |
-| Class 1 I/O, Large_Forward_Open | pass | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | pass | n/a |
-| Class 1 I/O, input only | pass | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | pass | n/a |
-| Forward_Open refusal (connection size) | pass | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | pass | n/a |
-| Class 1 I/O, configuration data | pass | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Logix Read Tag (atomic types) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Logix Read Tag Fragmented | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Logix Write Tag | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Logix tag list | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Case | eipscanner | cpppo | pycomm3 | libplctag | gologix | pylogix | etherip | eiprs | nodeeip | eeip | lokieip | cbsigma |
+|------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| ListIdentity (TCP) | n/a | pass | pass | n/a | pass | n/a | known | pass | pass | n/a | pass | pass |
+| ListIdentity (UDP) | pass | pass | pass | n/a | n/a | pass | known | pass | pass | pass | n/a | pass |
+| ListServices | n/a | pass | n/a | n/a | pass | n/a | known | pass | n/a | n/a | pass | n/a |
+| Get_Attribute_Single | pass | pass | pass | known | pass | pass | pass | pass | pass | pass | pass | pass |
+| Get_Attributes_All (Identity) | pass | pass | pass | known | pass | pass | pass | pass | pass | pass | pass | pass |
+| Set_Attribute_Single (assembly data) | pass | pass | pass | known | pass | pass | n/a | pass | pass | pass | pass | pass |
+| Error status (unknown attribute) | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| Multiple Service Packet | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Class 3 connected explicit messaging | n/a | n/a | pass | pass | pass | n/a | n/a | pass | known | n/a | known | pass |
+| identity operation | pass | n/a | n/a | pass | n/a | n/a | n/a | n/a | pass | pass | n/a | n/a |
+| Class 1 I/O, exclusive owner | pass | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | pass | n/a | known |
+| Class 1 I/O, Large_Forward_Open | pass | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | pass | n/a | n/a |
+| Class 1 I/O, input only | pass | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | pass | n/a | n/a |
+| Forward_Open refusal (connection size) | pass | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | pass | n/a | pass |
+| Class 1 I/O, configuration data | pass | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Logix Read Tag (atomic types) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Logix Read Tag Fragmented | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Logix Write Tag | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Logix Write Tag Fragmented (a whole array) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Logix tag list | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Logix tag list with structures (templates) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 
 #### Server cpppo
 
-| Case | eipscanner | cpppo | pycomm3 | libplctag | gologix | pylogix | etherip | eiprs | nodeeip | eeip | lokieip |
-|------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| ListIdentity (TCP) | n/a | pass | pass | n/a | pass | n/a | pass | pass | pass | n/a | pass |
-| ListIdentity (UDP) | pass | pass | pass | n/a | n/a | pass | pass | pass | pass | pass | n/a |
-| ListServices | n/a | pass | n/a | n/a | known | n/a | known | known | n/a | n/a | known |
-| Get_Attribute_Single | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass |
-| Get_Attributes_All (Identity) | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass |
-| Set_Attribute_Single (assembly data) | pass | pass | pass | pass | pass | pass | n/a | pass | pass | pass | pass |
-| Error status (unknown attribute) | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass |
-| Multiple Service Packet | pass | pass | n/a | n/a | pass | n/a | n/a | pass | pass | n/a | pass |
-| Class 3 connected explicit messaging | n/a | n/a | pass | known | pass | n/a | n/a | pass | pass | n/a | pass |
-| identity operation | pass | n/a | pass | pass | n/a | pass | pass | n/a | pass | pass | n/a |
-| Class 1 I/O, exclusive owner | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Class 1 I/O, Large_Forward_Open | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Class 1 I/O, input only | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Forward_Open refusal (connection size) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Class 1 I/O, configuration data | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Logix Read Tag (atomic types) | n/a | pass | n/a | n/a | n/a | n/a | known | n/a | n/a | n/a | n/a |
-| Logix Read Tag Fragmented | n/a | pass | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Logix Write Tag | n/a | pass | n/a | n/a | n/a | n/a | pass | n/a | n/a | n/a | n/a |
-| Logix tag list | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Case | eipscanner | cpppo | pycomm3 | libplctag | gologix | pylogix | etherip | eiprs | nodeeip | eeip | lokieip | cbsigma |
+|------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| ListIdentity (TCP) | n/a | pass | pass | n/a | pass | n/a | pass | pass | pass | n/a | pass | pass |
+| ListIdentity (UDP) | pass | pass | pass | n/a | n/a | pass | pass | pass | pass | pass | n/a | pass |
+| ListServices | n/a | pass | n/a | n/a | known | n/a | known | known | n/a | n/a | known | n/a |
+| Get_Attribute_Single | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| Get_Attributes_All (Identity) | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| Set_Attribute_Single (assembly data) | pass | pass | pass | pass | pass | pass | n/a | pass | pass | pass | pass | pass |
+| Error status (unknown attribute) | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| Multiple Service Packet | pass | pass | n/a | n/a | pass | n/a | n/a | pass | pass | n/a | pass | pass |
+| Class 3 connected explicit messaging | n/a | n/a | pass | known | pass | n/a | n/a | pass | pass | n/a | pass | pass |
+| identity operation | pass | n/a | pass | pass | n/a | pass | pass | n/a | pass | pass | n/a | n/a |
+| Class 1 I/O, exclusive owner | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Class 1 I/O, Large_Forward_Open | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Class 1 I/O, input only | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Forward_Open refusal (connection size) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Class 1 I/O, configuration data | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Logix Read Tag (atomic types) | n/a | pass | n/a | known | pass | pass | known | pass | pass | n/a | n/a | pass |
+| Logix Read Tag Fragmented | n/a | pass | n/a | known | n/a | pass | n/a | pass | n/a | n/a | n/a | pass |
+| Logix Write Tag | n/a | pass | n/a | known | pass | pass | pass | pass | pass | n/a | n/a | pass |
+| Logix Write Tag Fragmented (a whole array) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | pass | n/a | n/a | n/a | pass |
+| Logix tag list | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Logix tag list with structures (templates) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 
 #### Server libplctag
 
-| Case | eipscanner | cpppo | pycomm3 | libplctag | gologix | pylogix | etherip | eiprs | nodeeip | eeip | lokieip |
-|------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| ListIdentity (TCP) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| ListIdentity (UDP) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| ListServices | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Get_Attribute_Single | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Get_Attributes_All (Identity) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Set_Attribute_Single (assembly data) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Error status (unknown attribute) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Multiple Service Packet | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Class 3 connected explicit messaging | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| identity operation | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Class 1 I/O, exclusive owner | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Class 1 I/O, Large_Forward_Open | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Class 1 I/O, input only | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Forward_Open refusal (connection size) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Class 1 I/O, configuration data | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Logix Read Tag (atomic types) | n/a | pass | n/a | n/a | n/a | n/a | known | n/a | n/a | n/a | n/a |
-| Logix Read Tag Fragmented | n/a | pass | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Logix Write Tag | n/a | pass | n/a | n/a | n/a | n/a | known | n/a | n/a | n/a | n/a |
-| Logix tag list | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Case | eipscanner | cpppo | pycomm3 | libplctag | gologix | pylogix | etherip | eiprs | nodeeip | eeip | lokieip | cbsigma |
+|------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| ListIdentity (TCP) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| ListIdentity (UDP) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| ListServices | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Get_Attribute_Single | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Get_Attributes_All (Identity) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Set_Attribute_Single (assembly data) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Error status (unknown attribute) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Multiple Service Packet | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Class 3 connected explicit messaging | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| identity operation | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Class 1 I/O, exclusive owner | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Class 1 I/O, Large_Forward_Open | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Class 1 I/O, input only | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Forward_Open refusal (connection size) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Class 1 I/O, configuration data | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Logix Read Tag (atomic types) | n/a | pass | n/a | pass | known | pass | known | pass | pass | n/a | n/a | known |
+| Logix Read Tag Fragmented | n/a | pass | n/a | pass | n/a | pass | n/a | pass | n/a | n/a | n/a | known |
+| Logix Write Tag | n/a | pass | n/a | pass | known | pass | known | pass | pass | n/a | n/a | known |
+| Logix Write Tag Fragmented (a whole array) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | pass | n/a | n/a | n/a | known |
+| Logix tag list | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Logix tag list with structures (templates) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 
 #### Server gologix
 
-| Case | eipscanner | cpppo | pycomm3 | libplctag | gologix | pylogix | etherip | eiprs | nodeeip | eeip | lokieip |
-|------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| ListIdentity (TCP) | n/a | pass | pass | n/a | pass | n/a | pass | pass | pass | n/a | pass |
-| ListIdentity (UDP) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| ListServices | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Get_Attribute_Single | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Get_Attributes_All (Identity) | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass |
-| Set_Attribute_Single (assembly data) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Error status (unknown attribute) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Multiple Service Packet | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Class 3 connected explicit messaging | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| identity operation | pass | n/a | pass | pass | n/a | pass | pass | n/a | pass | pass | n/a |
-| Class 1 I/O, exclusive owner | known | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | known | n/a |
-| Class 1 I/O, Large_Forward_Open | known | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | known | n/a |
-| Class 1 I/O, input only | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Forward_Open refusal (connection size) | known | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | known | n/a |
-| Class 1 I/O, configuration data | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Logix Read Tag (atomic types) | n/a | pass | n/a | n/a | n/a | n/a | known | n/a | n/a | n/a | n/a |
-| Logix Read Tag Fragmented | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Logix Write Tag | n/a | known | n/a | n/a | n/a | n/a | pass | n/a | n/a | n/a | n/a |
-| Logix tag list | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Case | eipscanner | cpppo | pycomm3 | libplctag | gologix | pylogix | etherip | eiprs | nodeeip | eeip | lokieip | cbsigma |
+|------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| ListIdentity (TCP) | n/a | pass | pass | n/a | pass | n/a | pass | pass | pass | n/a | pass | pass |
+| ListIdentity (UDP) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| ListServices | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Get_Attribute_Single | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Get_Attributes_All (Identity) | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| Set_Attribute_Single (assembly data) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Error status (unknown attribute) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Multiple Service Packet | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Class 3 connected explicit messaging | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| identity operation | pass | n/a | pass | pass | n/a | pass | pass | n/a | pass | pass | n/a | n/a |
+| Class 1 I/O, exclusive owner | known | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | known | n/a | known |
+| Class 1 I/O, Large_Forward_Open | known | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | known | n/a | n/a |
+| Class 1 I/O, input only | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Forward_Open refusal (connection size) | known | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | known | n/a | known |
+| Class 1 I/O, configuration data | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Logix Read Tag (atomic types) | n/a | pass | n/a | pass | pass | pass | known | known | pass | n/a | n/a | pass |
+| Logix Read Tag Fragmented | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Logix Write Tag | n/a | known | n/a | pass | pass | pass | pass | known | pass | n/a | n/a | pass |
+| Logix Write Tag Fragmented (a whole array) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Logix tag list | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Logix tag list with structures (templates) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 
+#### Server cbsigma
+
+| Case | eipscanner | cpppo | pycomm3 | libplctag | gologix | pylogix | etherip | eiprs | nodeeip | eeip | lokieip | cbsigma |
+|------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| ListIdentity (TCP) | n/a | known | known | n/a | known | n/a | known | known | known | n/a | known | known |
+| ListIdentity (UDP) | known | known | known | n/a | n/a | known | known | known | known | known | n/a | known |
+| ListServices | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Get_Attribute_Single | pass | pass | pass | known | pass | pass | pass | pass | pass | pass | pass | pass |
+| Get_Attributes_All (Identity) | known | known | known | known | known | known | known | known | known | known | known | known |
+| Set_Attribute_Single (assembly data) | pass | pass | pass | known | pass | pass | n/a | pass | pass | pass | pass | pass |
+| Error status (unknown attribute) | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| Multiple Service Packet | known | pass | n/a | n/a | pass | n/a | n/a | pass | pass | n/a | pass | pass |
+| Class 3 connected explicit messaging | n/a | n/a | pass | pass | pass | n/a | n/a | pass | pass | n/a | pass | pass |
+| identity operation | pass | n/a | pass | pass | n/a | pass | pass | n/a | pass | pass | n/a | n/a |
+| Class 1 I/O, exclusive owner | known | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | known | n/a | known |
+| Class 1 I/O, Large_Forward_Open | known | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | known | n/a | n/a |
+| Class 1 I/O, input only | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Forward_Open refusal (connection size) | pass | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | pass | n/a | pass |
+| Class 1 I/O, configuration data | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| Logix Read Tag (atomic types) | n/a | pass | pass | pass | known | pass | known | known | pass | n/a | pass | pass |
+| Logix Read Tag Fragmented | n/a | pass | pass | pass | n/a | pass | n/a | known | n/a | n/a | n/a | pass |
+| Logix Write Tag | n/a | pass | pass | pass | known | pass | pass | known | pass | n/a | n/a | pass |
+| Logix Write Tag Fragmented (a whole array) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | known | n/a | n/a | n/a | pass |
+| Logix tag list | n/a | n/a | pass | pass | pass | pass | n/a | known | pass | n/a | pass | pass |
+| Logix tag list with structures (templates) | n/a | n/a | pass | pass | pass | known | n/a | known | pass | n/a | known | pass |
 What the cases check: the identity, the name (`@1/1/7`) and the start of
 Get_Attributes_All against the fixture; Set_Attribute_Single on the output
 assembly, then the input assembly (OpENer's echo) or the output assembly read
-back (cpppo); a non-zero status for attribute 99 of the Identity object;
+back; a non-zero status for attribute 99 of the Identity object;
 both replies of a Multiple Service Packet; for Class 1 the Forward_Open
 status, at least 10 packets each way (input only: received) at 10 ms RPI, no timeout,
-the output echoed into the last input (a pattern that set-attribute did not
-leave there), Forward_Close status 0, and a Forward_Open with a wrong size
-refused; for Logix the values of every scalar tag but the BOOL, all 300
-elements of `Samples`, and `Speeds` after writing three elements.
+the output echoed into the last input where the fixture echoes (a pattern that
+set-attribute did not leave there), Forward_Close status 0, and a Forward_Open
+with a wrong size refused; for Logix the values of every scalar tag but the
+BOOL, all 300 elements of `Samples`, `Speeds` after writing three elements,
+and all of `Samples` written, read back and restored
+(`logix-write-fragmented`); the tag list's length (`tag-list`), and on
+`logix-structures` every tag's name, the dimensions of all but the BOOL array
+and each structure tag's type named after its template
+(`tag-list-structures`).
 
 So, by feature, verified between at least two independent stacks: ListIdentity
 over TCP and UDP, ListServices, Get_Attribute_Single, Set_Attribute_Single,
 Get_Attributes_All and the `identity` operation (between most pairs), error
-statuses, Multiple Service Packet (EIPScanner, eip-rs, gologix and
-node-ethernet-ip → cpppo), Class 3 (eip-rs, gologix, libplctag, pycomm3 →
-OpENer; eip-rs, gologix, node-ethernet-ip, pycomm3 → cpppo), Class 1 I/O
-(EIPScanner and EEIP.NET → OpENer, with Large_Forward_Open and input-only;
-configuration data from EIPScanner), and Logix tag services (cpppo →
-libplctag's ab_server, including Read Tag Fragmented; cpppo → gologix;
-etherip → cpppo and gologix). The Logix originators that open with a tag
-list (pycomm3, pylogix, libplctag, eip-rs, node-ethernet-ip, gologix) have no
-reference target serving a usable one: cpppo and ab_server have none, and
-gologix's reply carries only names and types.
+statuses, Multiple Service Packet (EIPScanner, eip-rs, gologix,
+node-ethernet-ip, go-ethernet-ip (loki-os) and cbsigma → cpppo; all of them
+but EIPScanner → cbsigma), Class 3 (against
+OpENer, cpppo and cbsigma), Class 1 I/O (EIPScanner and EEIP.NET → OpENer,
+with Large_Forward_Open, input-only and configuration data; cbsigma → OpENer
+and EEIP.NET → cbsigma exchange data too, but their cases are known
+differences for want of a Forward_Close, cB-Sigma/enip#3), Logix tag services
+(against cpppo, ab_server, gologix and cbsigma, Read Tag Fragmented included;
+Write Tag Fragmented of a whole array: rseip → cpppo and ab_server, cbsigma →
+cpppo), and the tag list with templates (pycomm3, libplctag, gologix and
+node-ethernet-ip → cbsigma's `logix-structures`, the
+structures named after their templates). pycomm3's Logix driver, which opens
+with the tag list, runs against cbsigma, the one reference serving a usable
+one; cpppo and ab_server have none, and gologix's reply carries only names
+and types.
 
 ## Findings
 
@@ -266,6 +317,7 @@ reported upstream. The pairings they fail are listed in
 | [cB-Sigma/enip#5](https://github.com/cB-Sigma/enip/issues/5) | [#22](https://github.com/otfabric/ethernetip-interop/issues/22) | Unconnected_Send with an empty route is refused 0x01 / 0x0312 (rseip) |
 | [cB-Sigma/enip#6](https://github.com/cB-Sigma/enip/issues/6) | [#23](https://github.com/otfabric/ethernetip-interop/issues/23) | ListIdentity reports 0.0.0.0 and port 44818 as the socket address (pylogix drops it) |
 | [cB-Sigma/enip#7](https://github.com/cB-Sigma/enip/issues/7) | [#24](https://github.com/otfabric/ethernetip-interop/issues/24) | Read Template at the end of a definition answers success with no data; pylogix loops (also pylogix's fault) |
+| [cB-Sigma/enip#8](https://github.com/cB-Sigma/enip/issues/8) | [#27](https://github.com/otfabric/ethernetip-interop/issues/27) | The Class 1 inactivity timer is reset only by a new O->T CIP sequence count; an originator repeating it for unchanged data (go-ethernetip) is dropped after a few packets |
 
 ### Own stack
 
@@ -284,5 +336,9 @@ against `cbsigma`:
   python-ethernetip, cB-Sigma's enip; EIPScanner takes the path from its
   caller), so go-ethernetip does too from its next release
   ([otfabric/go-ethernetip#21](https://github.com/otfabric/go-ethernetip/pull/21)).
-  The waiver of `otfabric -> cbsigma` I/O stays until the own image is built
-  on that release.
+  With it the connection opens, but cB-Sigma's server then drops it after a
+  few packets: go-ethernetip repeats the CIP sequence count for unchanged
+  data, and cB-Sigma resets its timer only on a new one
+  ([cB-Sigma/enip#8](https://github.com/cB-Sigma/enip/issues/8), #27). The
+  waiver of `otfabric -> cbsigma` I/O stays, with its reason moved to that
+  issue once the own image is built on that release.
