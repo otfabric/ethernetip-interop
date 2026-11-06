@@ -104,7 +104,7 @@ Client operations:
 | `multiple-get` | | yes | | | yes | yes | | yes (packed by the adapter) |
 | `identity` | Get_Attributes_All `@1/1` (`@identity` tag) | | `GetModuleProperties` (Unconnected_Send) | etherip's identity (`--route 1/N`: of slot N) | | Get_Attributes_All `@1/1` | Get_Attributes_All `@1/1` |  |
 | `io` | | | | | | | yes |  |
-| `read-tag`, `read-tags`, `write-tag` | yes | yes | yes | yes | yes | yes | | yes (writes: scalars only) |
+| `read-tag`, `read-tags`, `write-tag` | yes | yes | yes | yes | yes | yes | | `read-tag`, `read-tags` only |
 | `tag-list` | yes | yes | yes | | yes | yes | | yes |
 
 Features (client / server; an absent feature is blank, or "–" in a
@@ -355,6 +355,12 @@ exercise them. They are declared from the stacks' sources
 - `tag-list` probes the programs and uploads templates (STRING as
   ASCIISTRING82); `programName` null.
 - Forward_Close waits for its reply; gologix's own server never answers it.
+- Server, Class 1: Forward_Close is not answered; a Large_Forward_Open is
+  answered with success but produces no I/O ("Large Forward Open IO
+  Connections Not Yet Supported"), so the connection times out; the
+  connection sizes of a Forward_Open are not checked (one an octet short is
+  accepted). No reference client gets that far (EIPScanner and EEIP.NET fail
+  earlier, `tests/known-differences.tsv`).
 - Server: gologix's server runs as a child of the adapter; a panic exits 1.
   A Forward_Open with 16-bit segments panics it (EIPScanner crashes it); a
   Get_Attribute with 16-bit segments answers 0x04. Only 8-bit,
@@ -583,9 +589,11 @@ v0.0.0-20221229063210-535f79752f63; the repository has no tags).
 - `multiple-get`: the library's packing is unexported; the adapter packs the
   Multiple Service Packet the same way.
 - Logix statuses: `Tag.Read` drops the status of a refused read (`status`
-  -1, "reports no value"); `Tag.Write` discards the reply, so `write-tag`
-  reports 0 whenever a reply arrives (a 100-character STRING write reports
-  0; the target stores it and the next read returns "").
+  -1, "reports no value").
+- No `write-tag` (v0.7.0): go-ethernet-ip writes a tag only whole, by its
+  instance in the tag list and with the dimension bits in the type, and
+  discards the reply. The contract's `write-tag` writes elements from element
+  0 and reports the status.
 - Reads: `read-tag` of one element by name (members and elements work);
   `--count N` reads the whole array by instance through the tag list. No
   Read Tag Fragmented (arrays larger than one reply fail); BOOL arrays are

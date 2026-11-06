@@ -604,6 +604,9 @@ static int op_read_tag(result *r, const target *t, const flags *fl) {
 	long long count = 1;
 	if (!valid_tag_name(name)) return usage("read-tag needs --tag NAME");
 	if (fget(fl, "count") && !parse_num(fget(fl, "count"), 1, 65535, &count)) return usage("--count: not a number in 1..65535");
+	/* --type (the element type of an array, docs/CONTAINER_CONTRACT.md) is
+	 * checked and otherwise unused: libplctag reads the type from the reply. */
+	if (fget(fl, "type") && !type_by_name(fget(fl, "type"))) return usage("--type: not a supported type");
 	char *a = tag_attrs(t, name, (int)count);
 	int32_t tag = create(a, t->timeout);
 	free(a);
@@ -983,7 +986,7 @@ static const struct {
     {"set-attribute", "class instance attribute data connected"},
     {"get-attributes-all", "class instance connected"},
     {"identity", ""},
-    {"read-tag", "tag count"},
+    {"read-tag", "tag count type"},
     {"read-tags", "tags"},
     {"write-tag", "tag type values"},
     {"tag-list", ""},

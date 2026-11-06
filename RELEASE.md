@@ -40,7 +40,10 @@ manual workflow and no releases (`own/go-ethernetip/README.md`).
 
 ### Changed
 
-- The repository layout of the other OT Fabric harnesses: `scripts/selftest.sh` is `scripts/interop.sh` (`make interop`, documents in `reports/interop/`, result ids `interop.<case>`), its cases are in `tests/cases.tsv`, and `scripts/known-bugs.tsv` and `scripts/selftest-known.tsv` are `tests/known-bugs.tsv` and `tests/known-differences.tsv`. The images and the contract are unchanged.
+- The repository layout of the other OT Fabric harnesses: `scripts/selftest.sh` is `scripts/interop.sh` (`make interop`, documents in `reports/interop/`, result ids `interop.<case>`), its cases are in `tests/cases.tsv`, and `scripts/known-bugs.tsv` and `scripts/selftest-known.tsv` are `tests/known-bugs.tsv` and `tests/known-differences.tsv`. The contract is unchanged.
+- libplctag's `read-tag` takes `--type`, as the contract lists it, and checks it: the cross-stack Logix Read Tag Fragmented and Write Tag cases ran it with `--type` (exit 2).
+- lokieip no longer declares `write-tag`: go-ethernet-ip writes a tag only whole, by instance, and the contract's `write-tag` writes elements from element 0. Its write had never run in the cross-stack self-test (no reference server has a tag list, which it needs).
+- `tests/known-differences.tsv`: the incompatibilities of the reference stacks with the own image (libplctag's Unconnected_Send without its route, etherip's ListServices name and its missing LINT and LREAL, cpppo's 15-octet ListServices name, and gologix's Class 1 target), which run only with that image.
 
 ---
 
