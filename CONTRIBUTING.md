@@ -52,7 +52,7 @@ Both architectures are built and self-tested natively, on an amd64 and an arm64 
 
 1. Specify it first: the operation, its flags, its result fields and when it succeeds in the contract; a fixture field and its meaning in [docs/FIXTURES.md](docs/FIXTURES.md) and the fixture schema.
 2. Implement it in every adapter whose upstream can do it; the others leave it out of `clientOperations` or declare the feature false, and treat the operation or flag as a usage error (exit 2).
-3. Add a case to `tests/cases.tsv` and to `run_case` in `scripts/interop.sh` with the operations and features it needs, and its check against the fixture.
+3. Add a case to `tests/cases.tsv` and to `run_case` in `scripts/interop.sh` with the operations and features it needs, and its check against the fixture (and, in the optional sixth column, the fixture it needs when not the server's default).
 4. Add the feature to the capability documents, to `schemas/` and to [docs/CAPABILITIES.md](docs/CAPABILITIES.md).
 
 Additive changes bump the contract's minor version; anything a consumer could break on bumps the major version.

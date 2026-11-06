@@ -54,7 +54,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        adapter: [opener, eipscanner, cpppo, pycomm3, libplctag, gologix, pylogix, etherip, eiprs, nodeeip, eeip, lokieip]
+        adapter: [opener, eipscanner, cpppo, pycomm3, libplctag, gologix, pylogix, etherip, eiprs, nodeeip, eeip, lokieip, cbsigma]
     steps:
       - uses: actions/checkout@v7
 

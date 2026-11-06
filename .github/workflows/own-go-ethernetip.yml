@@ -24,7 +24,7 @@ env:
   BASE_REGISTRY: mirror.gcr.io/library
   TOOLS_REGISTRY: mirror.gcr.io
   # The reference images of the harness release (its Makefile's ADAPTERS).
-  REFERENCES: opener eipscanner cpppo pycomm3 libplctag gologix pylogix etherip eiprs nodeeip eeip lokieip
+  REFERENCES: opener eipscanner cpppo pycomm3 libplctag gologix pylogix etherip eiprs nodeeip eeip lokieip cbsigma
 
 jobs:
   version:

@@ -18,7 +18,7 @@ Prints key=value lines (the format of $GITHUB_OUTPUT):
 Two kinds of pin:
 
 - A release (kind library: libplctag, gologix, cpppo, pycomm3, pylogix,
-  nodeeip): the latest is the newest release, looked up in the upstream's git
+  nodeeip, cbsigma): the latest is the newest release, looked up in the upstream's git
   tags, PyPI or npm; update = the version differs. Pre-releases are never
   "latest", except for gologix, whose every tag is a pre-release
   (vX.Y.Z-beta).
@@ -104,6 +104,10 @@ def libplctag():
 def gologix():
     version, sha, source, _ = git_release("https://github.com/danomagnum/gologix.git", "danomagnum/gologix", "-beta")
     return version, sha, source, "every gologix tag is a pre-release (vX.Y.Z-beta): the newest is taken as latest"
+
+
+def cbsigma():
+    return git_release("https://github.com/cB-Sigma/enip.git", "cB-Sigma/enip")
 
 
 def pypi(package, repository):
@@ -223,6 +227,7 @@ RELEASES = {
     "pycomm3": pycomm3,
     "pylogix": pylogix,
     "nodeeip": nodeeip,
+    "cbsigma": cbsigma,
 }
 COMMITS = {
     "opener": opener,

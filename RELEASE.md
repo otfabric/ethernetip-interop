@@ -27,6 +27,31 @@ manual workflow and no releases (`own/go-ethernetip/README.md`).
 
 ---
 
+## v0.8.0
+
+**Date:** 2026-11-06
+**Previous release:** v0.7.0
+
+### Added
+
+- A thirteenth reference stack, `cbsigma`: cB-Sigma's [enip](https://github.com/cB-Sigma/enip) v0.2.0 (Apache-2.0, Go), both roles, image `ghcr.io/otfabric/ethernetip-interop-cbsigma`. The server is enip's `server` package (the controller of cB-Sigma's enip-sim since its v0.2.0; enip-sim is pinned in `versions.yaml` but not linked) serving the `logix` and `logix-structures` fixtures: tags, structures, the tag list and templates, Class 3, Unconnected_Send and Class 1 I/O. The client does explicit messaging, Logix tags over Class 3 with Read and Write Tag Fragmented, the tag list with template names, and Class 1 I/O as scanner.
+- It is the first reference server with a tag list and templates: pycomm3, libplctag, gologix, node-ethernet-ip and cbsigma browse it, and pycomm3's Logix cases run against it for the first time. Class 1 I/O now runs between independent scanners and targets both ways (EEIP.NET to cbsigma, cbsigma to OpENer).
+- Case `logix-write-fragmented`: a whole 300-element array written (Write Tag Fragmented where the client needs it), read back and restored.
+- Case `tag-list-structures`: the tag list of the `logix-structures` fixture, each structure tag named after its template. `tests/cases.tsv` takes an optional sixth column, the fixture a case needs; `scripts/interop.sh` serves it in a second container of each server that has it, and records n/a for the others.
+
+### Changed
+
+- A client's Logix cases need `tagList` from the server only when the client uploads the tag list before any tag service (pycomm3, go-ethernet-ip (loki-os): `TAG_LIST_FIRST` in `scripts/interop.sh`). This opens the Logix cases of the other tag-list clients (libplctag, gologix, rseip, node-ethernet-ip, cbsigma) against cpppo, ab_server and gologix.
+- After an I/O case that leaves its connection open (no successful Forward_Close), the server is restarted before the next case: OpENer keeps such a connection's exclusive owner and refuses the next one (0x0106).
+- The smoke test compares the identity without the revision when `tests/known-differences.tsv` lists the pairing for `list-identity-tcp` (cbsigma's revision is fixed).
+
+### Known differences
+
+- cB-Sigma enip v0.2.0, reported upstream and tracked here: identity revision fixed at 33.11 ([cB-Sigma/enip#1](https://github.com/cB-Sigma/enip/issues/1), #18), 16-bit Message Router and Connection Manager paths ([#2](https://github.com/cB-Sigma/enip/issues/2), #19), Forward_Close of Class 1 connections ([#3](https://github.com/cB-Sigma/enip/issues/3), #20), case-sensitive tag names ([#4](https://github.com/cB-Sigma/enip/issues/4), #21), empty Unconnected_Send route ([#5](https://github.com/cB-Sigma/enip/issues/5), #22), socket address 0.0.0.0 ([#6](https://github.com/cB-Sigma/enip/issues/6), #23), Read Template at the end of a definition ([#7](https://github.com/cB-Sigma/enip/issues/7), #24). Its scanner sends no Forward_Close (documented upstream as not yet done).
+- The pairings the newly opened Logix cases and the new cases fail, with the stack at fault and its source: `tests/known-differences.tsv`; the cB-Sigma findings in `docs/COMPATIBILITY.md`.
+
+---
+
 ## v0.7.0
 
 **Date:** 2026-11-06

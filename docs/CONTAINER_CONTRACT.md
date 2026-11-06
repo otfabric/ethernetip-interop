@@ -44,10 +44,10 @@ explicit-messaging client).
 
 | Item | Value |
 |------|-------|
-| Image | `ghcr.io/otfabric/ethernetip-interop-<adapter>`: `opener`, `eipscanner`, `cpppo`, `pycomm3`, `libplctag`, `gologix`, `pylogix`, `etherip`, `eiprs`, `nodeeip`, `eeip`, `lokieip`; OT Fabric's own stack is the adapter `otfabric` (`own/go-ethernetip/README.md`) |
+| Image | `ghcr.io/otfabric/ethernetip-interop-<adapter>`: `opener`, `eipscanner`, `cpppo`, `pycomm3`, `libplctag`, `gologix`, `pylogix`, `etherip`, `eiprs`, `nodeeip`, `eeip`, `lokieip`, `cbsigma`; OT Fabric's own stack is the adapter `otfabric` (`own/go-ethernetip/README.md`) |
 | Entrypoint | `ethernetip-interop` (`/usr/local/bin/ethernetip-interop`) |
-| Default command | `server` for images with the server role (opener, cpppo, libplctag, gologix), `print-capabilities` for the others |
-| Ports | 44818/tcp and 44818/udp (encapsulation: explicit messaging, ListIdentity, ListServices; libplctag's and gologix's servers: TCP only); 2222/udp (Class 1 I/O; the opener and gologix images) |
+| Default command | `server` for images with the server role (opener, cpppo, libplctag, gologix, cbsigma), `print-capabilities` for the others |
+| Ports | 44818/tcp and 44818/udp (encapsulation: explicit messaging, ListIdentity, ListServices; libplctag's and gologix's servers: TCP only); 2222/udp (Class 1 I/O; the opener, gologix and cbsigma images) |
 | User | non-root, uid 10001 |
 | Fixtures | `/fixtures/<name>/fixture.json` (baked in: `adapter`, `logix`, `logix-structures`, `opener-sample`) |
 | Readiness file | `/run/ethernetip-interop/ready` |
@@ -132,19 +132,19 @@ a usage error.
 
 | Operation | Flags | Sends | Adapters |
 |-----------|-------|-------|----------|
-| `list-identity` | `--transport tcp\|udp` (default `tcp`; EIPScanner: `udp`, and `tcp` is a usage error) | ListIdentity (0x63) over TCP, or one unicast UDP datagram to `--host:--port` | eipscanner, cpppo, pycomm3, gologix, pylogix, etherip, eiprs, nodeeip, eeip, lokieip |
+| `list-identity` | `--transport tcp\|udp` (default `tcp`; EIPScanner: `udp`, and `tcp` is a usage error) | ListIdentity (0x63) over TCP, or one unicast UDP datagram to `--host:--port` | eipscanner, cpppo, pycomm3, gologix, pylogix, etherip, eiprs, nodeeip, eeip, lokieip, cbsigma |
 | `discover` | | pycomm3's `discover()` to `--host`: ListIdentity over UDP to port 44818, the first reply | pycomm3, pylogix |
 | `list-services` | `--transport tcp\|udp` | ListServices (0x04) | cpppo, gologix, etherip, eiprs, lokieip |
-| `get-attribute` | `--class --instance --attribute`, `--connected` | Get_Attribute_Single (0x0E), unconnected (SendRRData) or, with `--connected`, over a Class 3 connection (SendUnitData) | eipscanner, cpppo, pycomm3, libplctag, gologix, pylogix, etherip, eiprs, nodeeip, eeip, lokieip |
-| `set-attribute` | `--class --instance --attribute --data HEX`, `--connected` | Set_Attribute_Single (0x10) with the data | eipscanner, cpppo, pycomm3, libplctag, gologix, pylogix, eiprs, nodeeip, eeip, lokieip |
-| `get-attributes-all` | `--class --instance`, `--connected` | Get_Attributes_All (0x01) | eipscanner, cpppo, pycomm3, libplctag, gologix, pylogix, etherip, eiprs, nodeeip, eeip, lokieip |
-| `multiple-get` | `--path @CLASS/INSTANCE/ATTRIBUTE` (repeatable) | One Multiple Service Packet (0x0A to `@2/1`) of Get_Attribute_Single requests | eipscanner, cpppo, gologix, eiprs, nodeeip, lokieip |
+| `get-attribute` | `--class --instance --attribute`, `--connected` | Get_Attribute_Single (0x0E), unconnected (SendRRData) or, with `--connected`, over a Class 3 connection (SendUnitData) | eipscanner, cpppo, pycomm3, libplctag, gologix, pylogix, etherip, eiprs, nodeeip, eeip, lokieip, cbsigma |
+| `set-attribute` | `--class --instance --attribute --data HEX`, `--connected` | Set_Attribute_Single (0x10) with the data | eipscanner, cpppo, pycomm3, libplctag, gologix, pylogix, eiprs, nodeeip, eeip, lokieip, cbsigma |
+| `get-attributes-all` | `--class --instance`, `--connected` | Get_Attributes_All (0x01) | eipscanner, cpppo, pycomm3, libplctag, gologix, pylogix, etherip, eiprs, nodeeip, eeip, lokieip, cbsigma |
+| `multiple-get` | `--path @CLASS/INSTANCE/ATTRIBUTE` (repeatable) | One Multiple Service Packet (0x0A to `@2/1`) of Get_Attribute_Single requests | eipscanner, cpppo, gologix, eiprs, nodeeip, lokieip, cbsigma |
 | `identity` | | eipscanner: Get_Attributes_All of the Identity object `@1/1` (EIPScanner's `IdentityObject`). pycomm3: `get_module_info(0)`, the Identity object through Unconnected_Send to backplane slot 0 | eipscanner, pycomm3, libplctag, pylogix, etherip, nodeeip, eeip |
-| `io` | see below | Forward_Open (or Large_Forward_Open), Class 1 I/O for a duration, Forward_Close | eipscanner, eeip |
-| `read-tag` | `--tag NAME`, `--count N` (1), `--type T` (cpppo: element type of an array, for the fragment offsets; the others check it and read the type from the reply), `--route` (cpppo) | Logix Read Tag (0x4C); an array (`--count` > 1) with Read Tag Fragmented (0x52) | cpppo, pycomm3, libplctag, gologix, pylogix, etherip, eiprs, nodeeip, lokieip |
-| `read-tags` | `--tags A,B,C`, `--route` (cpppo) | Read Tag of each (cpppo: in sequence; pycomm3: in a Multiple Service Packet) | cpppo, pycomm3, libplctag, gologix, pylogix, etherip, eiprs, nodeeip, lokieip |
-| `write-tag` | `--tag NAME --type T --values V1,V2,...`, `--route` (cpppo) | Logix Write Tag (0x4D) of as many elements as values, from element 0; pycomm3: Write Tag Fragmented (0x53) when it does not fit one request, and the types below | cpppo, pycomm3, libplctag, gologix, pylogix, etherip, eiprs, nodeeip |
-| `tag-list` | | pycomm3's `LogixDriver` open: the controller's tag list (Symbol object 0x6B, Get_Instance_Attribute_List 0x55) and program name | pycomm3, libplctag, gologix, pylogix, eiprs, nodeeip, lokieip |
+| `io` | see below | Forward_Open (or Large_Forward_Open), Class 1 I/O for a duration, Forward_Close | eipscanner, eeip, cbsigma |
+| `read-tag` | `--tag NAME`, `--count N` (1), `--type T` (cpppo: element type of an array, for the fragment offsets; the others check it and read the type from the reply), `--route` (cpppo) | Logix Read Tag (0x4C); an array (`--count` > 1) with Read Tag Fragmented (0x52) | cpppo, pycomm3, libplctag, gologix, pylogix, etherip, eiprs, nodeeip, lokieip, cbsigma |
+| `read-tags` | `--tags A,B,C`, `--route` (cpppo) | Read Tag of each (cpppo: in sequence; pycomm3: in a Multiple Service Packet) | cpppo, pycomm3, libplctag, gologix, pylogix, etherip, eiprs, nodeeip, lokieip, cbsigma |
+| `write-tag` | `--tag NAME --type T --values V1,V2,...`, `--route` (cpppo) | Logix Write Tag (0x4D) of as many elements as values, from element 0; pycomm3: Write Tag Fragmented (0x53) when it does not fit one request, and the types below | cpppo, pycomm3, libplctag, gologix, pylogix, etherip, eiprs, nodeeip, cbsigma |
+| `tag-list` | | pycomm3's `LogixDriver` open: the controller's tag list (Symbol object 0x6B, Get_Instance_Attribute_List 0x55) and program name | pycomm3, libplctag, gologix, pylogix, eiprs, nodeeip, lokieip, cbsigma |
 
 `--type` names a CIP elementary type: `BOOL`, `SINT`, `INT`, `DINT`, `LINT`,
 `USINT`, `UINT`, `UDINT`, `ULINT`, `REAL`, `LREAL`. pycomm3's `write-tag` also
@@ -156,7 +156,7 @@ takes (v0.2.0):
 | `STRING` | one text (commas included) | Write Tag of a STRING structure |
 | `JSON` | one JSON value | a structure as an object of its members (`{"Speed": 5, ...}`): Write Tag of the whole structure |
 
-`--route` (cpppo, pylogix, etherip, eiprs, gologix, node-ethernet-ip): the
+`--route` (cpppo, pylogix, etherip, eiprs, gologix, node-ethernet-ip, cbsigma): the
 route path for Unconnected_Send, for example `1/0` (backplane, slot 0);
 node-ethernet-ip takes only `1/<slot>`, which it puts in its Forward_Open
 path. The adapters' quirks ([CAPABILITIES.md](CAPABILITIES.md)) say how each

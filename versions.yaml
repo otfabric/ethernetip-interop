@@ -4,7 +4,7 @@
 # requirements.txt of the Python adapters are the source of truth for a
 # build: scripts/check-versions.sh fails when this file disagrees with them.
 
-interop_version: "0.7.0"
+interop_version: "0.8.0"
 contract_version: "1.0"        # docs/CONTAINER_CONTRACT.md; documents carry schemaVersion "1.0", the compatible line
 fixture_schema: "1.0"          # fixtures/schema/ethernetip-fixture.schema.json
 
@@ -236,6 +236,42 @@ implementations:
       UDP, no Class 1, no fragmented services, no templates. The upstream
       repository carries a Rockwell PDF; it is not in the image.
 
+  cbsigma:
+    priority: P1
+    status: implemented
+    upstream: "cB-Sigma/enip"
+    repository: "https://github.com/cB-Sigma/enip"
+    module: "github.com/cB-Sigma/enip"
+    version: "0.2.0"               # tag v0.2.0 (Go module version)
+    revision: "a3cb007728bbaf830cf89b24c3a06bba8075ec3b"   # tag commit
+    source_sha256: "0a02ed5cb32dbe41edee94b7ea4bd523ab98d5677026f63bedcb2801245b0e33"   # GitHub archive of the commit
+    module_sum: "h1:Ym8XUTpJ8IaEEJF4slatHvviJjOuWqgSfZTR6ahWybQ="   # go.sum, verified at build
+    license: "Apache-2.0"
+    language: "Go"
+    independent_engine: true
+    roles: [server, client]
+    published: true
+    dependencies:
+      lanbcast: "github.com/cB-Sigma/lanbcast v0.2.0 h1:cBr09Cfi5K7bGEqYPhERuvV6qh8EZ4oGTbViKlOsnMs= (Apache-2.0)"
+    simulator:
+      # cB-Sigma's simulated controller. Since its v0.2.0 the controller is
+      # enip's server package, which the adapter's server role links
+      # directly with the fixture's tags; enip-sim itself (a demo tag table
+      # and a command) is not linked into the image.
+      repository: "https://github.com/cB-Sigma/enip-sim"
+      version: "0.2.0"             # tag v0.2.0
+      revision: "b9822ff9afb53d2e766efdc0663efca6661edeec"   # tag commit
+      source_sha256: "3c9c11a74fde122e78a193c456ae7bb310db68fc6ae1280c43a019c4328dde7f"   # GitHub archive of the commit
+    note: >-
+      Logix-style target (enip's server package: tags, structures, the Symbol
+      and Template objects for browsing, Class 3, Unconnected_Send to the
+      fixture's slot, Multiple Service Packet, fragmentation, Class 1
+      assemblies) and an originator (explicit messaging, Logix tags over a
+      Class 3 connection, tag browsing with templates, Class 1 I/O with
+      OpenIO). No ListServices, no multicast, input-only or listen-only, no
+      configuration data, no Forward_Close of I/O connections, a fixed
+      identity revision (33.11).
+
 # OT Fabric's own stacks. Not independent implementations, not in a release of
 # this repository or its manifest.json: see own/<library>/README.md.
 own_implementations:
@@ -253,13 +289,13 @@ own_implementations:
 
 base_images:
   # Digests recorded 2026-10-19 (the same as dnp3-interop); the Dockerfiles pin these by digest.
-  # used by: opener, eipscanner, libplctag, gologix, lokieip, eiprs, otfabric (own/go-ethernetip)
+  # used by: opener, eipscanner, libplctag, gologix, lokieip, eiprs, cbsigma, otfabric (own/go-ethernetip)
   debian_trixie_slim: "docker.io/library/debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f"
   python_3_14_8_slim_trixie: "docker.io/library/python:3.14.8-slim-trixie@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170"
   # Recorded 2026-10-26 for the v0.3.0 adapters.
   maven_3_9_11_temurin_21_noble: "docker.io/library/maven:3.9.11-eclipse-temurin-21-noble@sha256:6fdc855a6ed81d288ca7ca37ac6ff5e9308b612485c0801d70b25a858c83d237"
   temurin_21_0_8_jre_noble: "docker.io/library/eclipse-temurin:21.0.8_9-jre-noble@sha256:20e7f7288e1c18eebe8f06a442c9f7183342d9b022d3b9a9677cae2b558ddddd"
-  # used by: gologix, lokieip, otfabric (own/go-ethernetip)
+  # used by: gologix, lokieip, cbsigma, otfabric (own/go-ethernetip)
   golang_1_27_3_trixie: "docker.io/library/golang:1.27.3-trixie@sha256:fbb7ae40b62ff8afe31662df570d39b4f5052ac32b90dae8e60d7657a20a74f4"
   rust_1_98_1_slim_trixie: "docker.io/library/rust:1.98.1-slim-trixie@sha256:4cd829461bd5c4d511c32e269da9cb8929223b666519d8004e35fc8d1d771ab7"
   node_24_22_1_trixie_slim: "docker.io/library/node:24.22.1-trixie-slim@sha256:43b9ba1142b8dcf33fa8f922ca1be85714adc444e0586c7cf7726daaeabc1bea"
@@ -279,6 +315,7 @@ images:
   nodeeip: "ghcr.io/otfabric/ethernetip-interop-nodeeip"
   eeip: "ghcr.io/otfabric/ethernetip-interop-eeip"
   lokieip: "ghcr.io/otfabric/ethernetip-interop-lokieip"
+  cbsigma: "ghcr.io/otfabric/ethernetip-interop-cbsigma"
 
 platforms:
   - "linux/amd64"
