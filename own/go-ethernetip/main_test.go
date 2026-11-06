@@ -5,6 +5,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net"
 	"os"
 	"path/filepath"
@@ -222,3 +223,56 @@ func TestUnreachable(t *testing.T) {
 		t.Errorf("exit %d, %q", code, out.String())
 	}
 }
+
+// TestTagListStructures: tag-list reports a structure tag's type as its
+// template's name and an array's type as its element type, against the
+// logix-structures fixture served by this adapter.
+func TestTagListStructures(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "fixture.json")
+	if err := os.WriteFile(p, []byte(structuresFixture), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	f, err := loadFixture(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv, err := newServer(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := srv.Listen("127.0.0.1:0"); err != nil {
+		t.Fatal(err)
+	}
+	go func() { _ = srv.Serve() }()
+	t.Cleanup(func() { _ = srv.Close() })
+	_, port, _ := net.SplitHostPort(srv.Addr().String())
+	out := capture(t)
+	if code := run([]string{"client", "tag-list", "--host", "127.0.0.1", "--port", port}); code != exitOK {
+		t.Fatalf("exit %d, %q", code, out.String())
+	}
+	var doc struct {
+		Tags []struct {
+			Name string `json:"name"`
+			Type string `json:"type"`
+			Dims []int  `json:"dims"`
+		} `json:"tags"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &doc); err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, tg := range doc.Tags {
+		got[tg.Name] = fmt.Sprintf("%s %v", tg.Type, tg.Dims)
+	}
+	want := map[string]string{"Flags": "DINT []", "Bits": "DWORD [64]", "Message": "ASCIISTRING82 []",
+		"Names": "ASCIISTRING82 [3]", "Pump": "Motor []", "Fans": "Motor [2]"}
+	for name, w := range want {
+		if got[name] != w {
+			t.Errorf("%s: %q, want %q", name, got[name], w)
+		}
+	}
+}
+
+// structuresFixture is fixtures/logix-structures/fixture.json, which the image
+// build does not have next to the sources.
+const structuresFixture = `{"schemaVersion":"1.0","name":"logix-structures","description":"logix-structures, inlined for the test","identity":{"vendorId":1,"deviceType":14,"productCode":54,"revision":"20.11","serialNumber":2882400002,"productName":"1756-L61/B LOGIX5561"},"assemblies":[],"echoOutputToInput":false,"slot":0,"templates":[{"name":"Motor","id":257,"handle":23100,"size":108,"members":[{"name":"ZZZZZZZZZZMotor0","type":"SINT","offset":0},{"name":"Enabled","type":"BOOL","bit":0,"offset":0},{"name":"Faulted","type":"BOOL","bit":1,"offset":0},{"name":"Speed","type":"DINT","offset":4},{"name":"Current","type":"REAL","offset":8},{"name":"Setpoints","type":"INT","count":4,"offset":12},{"name":"Label","type":"STRING","offset":20}]}],"tags":[{"name":"Flags","type":"DINT","values":[0]},{"name":"Bits","type":"BOOL","count":64,"pattern":{"multiplier":0,"offset":0}},{"name":"Message","type":"STRING","strings":["hello"]},{"name":"Names","type":"STRING","count":3,"strings":["alpha","beta","gamma"]},{"name":"Pump","type":"Motor","fields":[{"Enabled":1,"Faulted":0,"Speed":1500,"Current":2.5,"Setpoints":[10,20,30,40],"Label":"pump"}]},{"name":"Fans","type":"Motor","count":2,"fields":[{"Enabled":0,"Faulted":1,"Speed":600,"Current":0.75,"Setpoints":[1,2,3,4],"Label":"fan-a"},{"Enabled":1,"Faulted":0,"Speed":900,"Current":1.25,"Setpoints":[5,6,7,8],"Label":"fan-b"}]}]}`

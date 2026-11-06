@@ -270,14 +270,19 @@ reported upstream. The pairings they fail are listed in
 ### Own stack
 
 Seen with the own image (`ethernetip-interop-otfabric`, go-ethernetip v0.5.0)
-against `cbsigma`; recorded in `tests/known-differences.tsv` (scope
-`client@otfabric` or `server@cbsigma`), not changed in go-ethernetip:
+against `cbsigma`:
 
-- `tag-list` reports a structure tag's type as the library's type string
-  (`struct 0x100`) rather than the template's name. go-ethernetip itself
-  reads cB-Sigma's templates and their names (`Motor`); the adapter does not
-  ask for them.
-- With no configuration assembly (`--config 0`) the scanner leaves the
-  configuration instance out of the Class 1 path; cB-Sigma's server requires
-  it (0x0315), OpENer, gologix and go-ethernetip's own server do not. Which
-  side the specification supports is an open question.
+- `tag-list` reported a structure tag's type as the library's type string
+  (`struct 0x100`) rather than the template's name, and an array's type with
+  its dimension count (`DWORD[1 dims]`). Fixed in the adapter: the
+  type is the element type, and a structure's is its template's name, read
+  from the Template object (`Motor`; the built-in STRING is `ASCIISTRING82`,
+  as the controller names it).
+- With no configuration assembly (`--config 0`) go-ethernetip v0.5.0 leaves
+  the configuration instance out of the Class 1 path; cB-Sigma's server
+  requires it (0x0315). Every other originator sends it (EEIP.NET, eeip.py,
+  python-ethernetip, cB-Sigma's enip; EIPScanner takes the path from its
+  caller), so go-ethernetip does too from its next release
+  ([otfabric/go-ethernetip#21](https://github.com/otfabric/go-ethernetip/pull/21)).
+  The waiver of `otfabric -> cbsigma` I/O stays until the own image is built
+  on that release.
