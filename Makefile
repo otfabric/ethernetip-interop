@@ -31,11 +31,11 @@ BUILDER ?= ethernetip-interop
 
 # Every adapter: built and self-tested everywhere. Override to work on one:
 # make smoke ADAPTERS=opener
-ADAPTERS ?= opener eipscanner cpppo pycomm3 libplctag gologix pylogix etherip eiprs nodeeip eeip lokieip
+ADAPTERS ?= opener eipscanner cpppo pycomm3 libplctag gologix pylogix etherip eiprs nodeeip eeip lokieip cbsigma
 
-# The adapters whose images are pushed to the registry: all twelve, whose
+# The adapters whose images are pushed to the registry: all thirteen, whose
 # licences permit redistribution with their notices (THIRD_PARTY_NOTICES.md).
-PUBLISHED_ADAPTERS ?= opener eipscanner cpppo pycomm3 libplctag gologix pylogix etherip eiprs nodeeip eeip lokieip
+PUBLISHED_ADAPTERS ?= opener eipscanner cpppo pycomm3 libplctag gologix pylogix etherip eiprs nodeeip eeip lokieip cbsigma
 
 image = $(REGISTRY)/ethernetip-interop-$(1)
 

@@ -2,7 +2,7 @@
 
 ## What this is
 
-Independent EtherNet/IP target and originator implementations (OpENer, EIPScanner, cpppo, pycomm3, libplctag, gologix, pylogix, etherip, eip-rs, node-ethernet-ip, EEIP.NET, go-ethernet-ip) in containers behind one command-line contract, with deterministic fixtures, used as oracles by go-ethernetip and ethernetipctl. Nothing here depends on go-ethernetip, except `own/`, the one image of OT Fabric's own stack (`own/go-ethernetip/README.md`). Profile: **interoperability**.
+Independent EtherNet/IP target and originator implementations (OpENer, EIPScanner, cpppo, pycomm3, libplctag, gologix, pylogix, etherip, eip-rs, node-ethernet-ip, EEIP.NET, go-ethernet-ip, cB-Sigma enip) in containers behind one command-line contract, with deterministic fixtures, used as oracles by go-ethernetip and ethernetipctl. Nothing here depends on go-ethernetip, except `own/`, the one image of OT Fabric's own stack (`own/go-ethernetip/README.md`). Profile: **interoperability**.
 
 ## Organisation standards
 

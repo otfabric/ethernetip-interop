@@ -21,6 +21,7 @@ any library that consumes the images.
 | `eiprs` | [eip-rs (rseip)](https://github.com/Joylei/eip-rs) | main, 0.3.1-2 | commit `16e2236afb65acc9c82ebdcfbdcbba72e93b3887`, GitHub archive SHA-256 `92cccb84822056e23ab93a2d200f11ebf7a3c6813648eaf081d653d2961da77b`; crates in `Cargo.lock` | independent, Rust |
 | `nodeeip` | [node-ethernet-ip](https://github.com/cmseaton42/node-ethernet-ip) | 2.0.0 | npm integrity `sha512-jGxbu8ifv2qgPzaNKbyFmLaOaefrsg3aVsBWEj3BTWyGSfaVRx/MnkNJuiR/+41GzWgt/LZpYnFGJnAnjO7DCA==` (commit `4743b077abd3cc8826d511acde8f890372826e16`) | independent, TypeScript |
 | `lokieip` | [go-ethernet-ip (loki-os)](https://github.com/loki-os/go-ethernet-ip) | master, 2022-12-29 | commit `535f79752f63a4122c37c7f0f9b95ece01a8f7b4`, GitHub archive SHA-256 `4708b8c2f72721682d6adf4719ff2bdcea070d78271d17d078f5a597f2cd5f07`, Go module sum `h1:kkL3XKGDjH1qNF78xvwJ9+lzbCwy5cCQxtkcNnbVurw=` | independent, Go |
+| `cbsigma` | [enip (cB-Sigma)](https://github.com/cB-Sigma/enip) | v0.2.0 | commit `a3cb007728bbaf830cf89b24c3a06bba8075ec3b`, GitHub archive SHA-256 `0a02ed5cb32dbe41edee94b7ea4bd523ab98d5677026f63bedcb2801245b0e33`, Go module sum `h1:Ym8XUTpJ8IaEEJF4slatHvviJjOuWqgSfZTR6ahWybQ=`; lanbcast v0.2.0 | independent, Go |
 | `eeip` | [EEIP.NET](https://github.com/rossmann-engineering/EEIP.NET) | master, 1.6.0 | commit `58b91a0c8e30227b1b97a637635d147a2a9655dc`, GitHub archive SHA-256 `8ad4f3e498b6d02b1c65b8fae498100a9f9f90d6f691423e5c80559c4eceff5b` | independent, C# |
 
 OpENer, EIPScanner, etherip, eip-rs, EEIP.NET and go-ethernet-ip (loki-os) are pinned to a commit of
@@ -41,9 +42,9 @@ day, and on demand, whether each pin is still the latest upstream
 (`scripts/latest-upstream.py <adapter>`), and whether the tag of every
 digest-pinned base image has moved:
 
-- **Release pins** (libplctag, gologix, cpppo, pycomm3, pylogix, nodeeip) are
-  compared with the newest release: git tags of libplctag/libplctag, PyPI, npm
-  (`ethernet-ip`). Every gologix tag is a pre-release (`v0.44.0-beta`), so
+- **Release pins** (libplctag, gologix, cpppo, pycomm3, pylogix, nodeeip,
+  cbsigma) are compared with the newest release: git tags of
+  libplctag/libplctag and cB-Sigma/enip, PyPI, npm (`ethernet-ip`). Every gologix tag is a pre-release (`v0.44.0-beta`), so
   its newest tag counts as its latest.
 - **Default-branch pins** (opener, eipscanner, etherip, eiprs, eeip,
   lokieip) are compared with the head of the default branch: the pin is behind
@@ -248,3 +249,35 @@ gologix's reply carries only names and types.
   0x08 (service not supported).
 - EIPScanner reports a refused Forward_Open only in its log; the adapter
   reports it as `refused` with status -1.
+
+### cB-Sigma enip v0.2.0
+
+Found with the `cbsigma` adapter (v0.8.0), each in a cross-stack run and a
+capture of the target, reproduced with enip's own client and server, and
+reported upstream. The pairings they fail are listed in
+`tests/known-differences.tsv` with both links.
+
+| Upstream issue | Tracking | What |
+|---|---|---|
+| [cB-Sigma/enip#1](https://github.com/cB-Sigma/enip/issues/1) | [#18](https://github.com/otfabric/ethernetip-interop/issues/18) | The identity revision is fixed at 33.11 (ListIdentity, Identity attribute 4) |
+| [cB-Sigma/enip#2](https://github.com/cB-Sigma/enip/issues/2) | [#19](https://github.com/otfabric/ethernetip-interop/issues/19) | Message Router and Connection Manager paths with 16-bit logical segments get 0x16 (EIPScanner) |
+| [cB-Sigma/enip#3](https://github.com/cB-Sigma/enip/issues/3) | [#20](https://github.com/otfabric/ethernetip-interop/issues/20) | Forward_Close of a Class 1 connection is answered 0x01 / 0x0107 (server); the scanner sends none (documented upstream as not yet done) |
+| [cB-Sigma/enip#4](https://github.com/cB-Sigma/enip/issues/4) | [#21](https://github.com/otfabric/ethernetip-interop/issues/21) | Tag names are matched with case (gologix sends them in lower case) |
+| [cB-Sigma/enip#5](https://github.com/cB-Sigma/enip/issues/5) | [#22](https://github.com/otfabric/ethernetip-interop/issues/22) | Unconnected_Send with an empty route is refused 0x01 / 0x0312 (rseip) |
+| [cB-Sigma/enip#6](https://github.com/cB-Sigma/enip/issues/6) | [#23](https://github.com/otfabric/ethernetip-interop/issues/23) | ListIdentity reports 0.0.0.0 and port 44818 as the socket address (pylogix drops it) |
+| [cB-Sigma/enip#7](https://github.com/cB-Sigma/enip/issues/7) | [#24](https://github.com/otfabric/ethernetip-interop/issues/24) | Read Template at the end of a definition answers success with no data; pylogix loops (also pylogix's fault) |
+
+### Own stack
+
+Seen with the own image (`ethernetip-interop-otfabric`, go-ethernetip v0.5.0)
+against `cbsigma`; recorded in `tests/known-differences.tsv` (scope
+`client@otfabric` or `server@cbsigma`), not changed in go-ethernetip:
+
+- `tag-list` reports a structure tag's type as the library's type string
+  (`struct 0x100`) rather than the template's name. go-ethernetip itself
+  reads cB-Sigma's templates and their names (`Motor`); the adapter does not
+  ask for them.
+- With no configuration assembly (`--config 0`) the scanner leaves the
+  configuration instance out of the Class 1 path; cB-Sigma's server requires
+  it (0x0315), OpENer, gologix and go-ethernetip's own server do not. Which
+  side the specification supports is an open question.

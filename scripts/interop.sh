@@ -6,8 +6,9 @@
 #
 # Usage: interop.sh [adapter ...]     default: the Makefile's ADAPTERS
 #
-# Each server serves its first fixture (print-capabilities .fixtures[0]); the
-# expected values come from that fixture in this repository. A case runs
+# Each server serves its first fixture (print-capabilities .fixtures[0]), and
+# for a case that names another one in tests/cases.tsv, that fixture; the
+# expected values come from the fixture in this repository. A case runs
 # when the client lists the operations it needs and both sides declare the
 # features it needs; otherwise it is recorded as n/a with the reason. Every
 # result document is kept under REPORT_DIR/interop/<client>-<server>/, the
@@ -55,15 +56,23 @@ log "upstreams: $(for a in "${ADAPTERS[@]}"; do printf '%s %s; ' "$a" "${UPSTREA
 
 # The cases: tests/cases.tsv.
 CASES=()
-while IFS=$'\t' read -r id feature ops cfeat sfeat; do
+while IFS=$'\t' read -r id feature ops cfeat sfeat cfx; do
     [[ -z "${id}" || "${id}" == \#* ]] && continue
     [[ "${cfeat}" == - ]] && cfeat=""
     [[ "${sfeat}" == - ]] && sfeat=""
-    CASES+=("${id}|${feature}|${ops}|${cfeat}|${sfeat}")
+    [[ "${cfx:-}" == - ]] && cfx=""
+    CASES+=("${id}|${feature}|${ops}|${cfeat}|${sfeat}|${cfx:-}")
 done < "${ROOT}/tests/cases.tsv"
 
 has_feature() { jq -e --arg f "$2" --arg k "$3Features" '.[$k][$f] == true' <<<"${CAPS[$1]}" >/dev/null 2>&1; }
 has_op() { jq -e --arg o "$2" '.clientOperations | index($o)' <<<"${CAPS[$1]}" >/dev/null 2>&1; }
+
+# The clients whose Logix operations need the tag list before any tag service
+# (pycomm3's LogixDriver opens with it; go-ethernet-ip (lokieip) reads tags by
+# their instance in it), so they need tagList from the server. The other
+# clients that read the tag list (tag-list) do not need it to read or write a
+# tag.
+TAG_LIST_FIRST="pycomm3 lokieip"
 
 # why_not <client> <server> <ops> <client features> <server features>: the
 # reason a case does not apply, or nothing.
@@ -75,7 +84,7 @@ why_not() {
         case "$f" in
         logix)
             has_feature "$s" logixTags server || { echo "${s} (server) lacks logixTags"; return; }
-            if has_feature "$c" tagList client && ! has_feature "$s" tagList server; then
+            if [[ " ${TAG_LIST_FIRST} " == *" ${c} "* ]] && ! has_feature "$s" tagList server; then
                 echo "${c} uploads the tag list first; ${s} (server) lacks tagList"; return
             fi ;;
         identity)
@@ -270,6 +279,36 @@ run_case() {
         expect '.ok and .status == 0' || return 1
         op read-tag --tag "$(jq -r '.name' <<<"${tag}")" --count 4 --type "${typ}"
         expect ".status == 0 and .values == ${want}" ;;
+    logix-write-fragmented)
+        # The largest pattern array, whole: more than one request carries
+        # (Write Tag Fragmented). Each client writes its own values, reads
+        # them back, then writes the fixture's values back for the cases of
+        # the next clients.
+        local tag name typ count mine orig
+        tag=$(jq -c '[.tags[] | select(.pattern and (.type | IN("INT", "DINT")))] | max_by(.count)' <<<"${FX}")
+        [[ "${tag}" != null ]] || { NOTE="the fixture has no INT or DINT array tag"; return 2; }
+        name=$(jq -r '.name' <<<"${tag}"); typ=$(jq -r '.type' <<<"${tag}"); count=$(jq -r '.count' <<<"${tag}")
+        mine=$(jq -c --argjson k "$((16#${pat}))" '[range(.count) as $i | $i * .pattern.multiplier + .pattern.offset + $k]' <<<"${tag}")
+        orig=$(jq -c '[range(.count) as $i | $i * .pattern.multiplier + .pattern.offset]' <<<"${tag}")
+        op write-tag --tag "${name}" --type "${typ}" --values "$(jq -r 'map(tostring) | join(",")' <<<"${mine}")"
+        expect '.ok and .status == 0' || return 1
+        op read-tag --tag "${name}" --count "${count}" --type "${typ}"
+        expect ".status == 0 and .values == ${mine}" || return 1
+        op write-tag --tag "${name}" --type "${typ}" --values "$(jq -r 'map(tostring) | join(",")' <<<"${orig}")"
+        expect '.ok and .status == 0' || return 1
+        op read-tag --tag "${name}" --count "${count}" --type "${typ}"
+        expect ".status == 0 and .values == ${orig}" ;;
+    tag-list-structures)
+        # Every tag by name, the dimensions of all but the BOOL arrays (Logix
+        # holds those in DWORDs, and targets report the dimension in bits or
+        # in DWORDs), and each structure tag's type named after its
+        # template, which the client reads from the Template object.
+        op tag-list
+        expect '. as $d | ($fx.templates | map(.name)) as $tn | .ok
+            and ([.tags[].name] | sort) == ([$fx.tags[].name] | sort)
+            and ([$fx.tags[] | select(.type != "BOOL") | . as $t | [$d.tags[] | select(.name == $t.name) | .dims]
+                == [if $t.count == null then [] else [$t.count] end]] | all)
+            and ([$fx.tags[] | select(.type | IN($tn[])) | . as $t | [$d.tags[] | select(.name == $t.name) | .type] == [$t.type]] | all)' ;;
     tag-list)
         op tag-list
         expect ".ok and (.tags | length) == (\$fx.tags | length)" ;;
@@ -277,13 +316,25 @@ run_case() {
     esac
 }
 
+# A case runs against the server's default fixture (.fixtures[0]), or against
+# the fixture tests/cases.tsv names for it, in a second container of the same
+# server serving that fixture; a server that does not serve it records n/a.
+serves() { jq -e --arg f "$2" '.fixtures | index($f)' <<<"${CAPS[$1]}" >/dev/null 2>&1; }
 for SERVER in "${SERVERS[@]}"; do
-    fixture=$(jq -r '.fixtures[0]' <<<"${CAPS[${SERVER}]}")
+  default=$(jq -r '.fixtures[0]' <<<"${CAPS[${SERVER}]}")
+  passes=("${default}")
+  for c in "${CASES[@]}"; do
+      f="${c##*|}"
+      [[ -n "${f}" && "${f}" != "${default}" && " ${passes[*]} " != *" ${f} "* ]] && serves "${SERVER}" "${f}" && passes+=("${f}")
+  done
+  for fixture in "${passes[@]}"; do
     FX=$(jq -c . "${ROOT}/fixtures/${fixture}/fixture.json")
-    name=$(start_server "${SERVER}")
+    sargs=()
+    [[ "${fixture}" != "${default}" ]] && sargs=(--fixture "/fixtures/${fixture}/fixture.json")
+    name=$(start_server "${SERVER}" "${sargs[@]}")
     if ! wait_ready "${name}"; then
         RESULT_ID=""
-        fail "${SERVER} did not become ready"
+        fail "${SERVER} did not become ready (${fixture})"
         continue
     fi
     HOST=$(ip_of "${name}")
@@ -292,11 +343,18 @@ for SERVER in "${SERVERS[@]}"; do
         DIR="${OUT}/${CLIENT}-${SERVER}"
         mkdir -p "${DIR}"
         for c in "${CASES[@]}"; do
-            IFS='|' read -r CASE feature ops cfeat sfeat <<<"${c}"
+            IFS='|' read -r CASE feature ops cfeat sfeat cfx <<<"${c}"
+            want="${cfx:-${default}}"
+            if [[ "${want}" != "${fixture}" ]]; then
+                # Recorded once, in the default fixture's pass.
+                [[ "${fixture}" == "${default}" ]] && ! serves "${SERVER}" "${want}" || continue
+            fi
             N=0 NOTE=""
             RESULT_FEATURE="${feature}"
             at "interop.${CASE}" "${CLIENT}" "${SERVER}"
-            reason=$(why_not "${CLIENT}" "${SERVER}" "${ops}" "${cfeat}" "${sfeat}")
+            reason=""
+            [[ "${want}" == "${fixture}" ]] || reason="${SERVER} (server) does not serve the ${want} fixture"
+            [[ -n "${reason}" ]] || reason=$(why_not "${CLIENT}" "${SERVER}" "${ops}" "${cfeat}" "${sfeat}")
             if [[ -n "${reason}" ]]; then
                 NA=$((NA + 1))
                 result unsupported "${reason}"
@@ -311,7 +369,18 @@ for SERVER in "${SERVERS[@]}"; do
                 NOTE="the server stopped during the case (exit $(docker inspect --format '{{.State.ExitCode}}' "${name}" 2>/dev/null || echo '?')); ${NOTE}"
                 rc=1
                 stop_server "${name}"
-                name=$(start_server "${SERVER}")
+                name=$(start_server "${SERVER}" "${sargs[@]}")
+                wait_ready "${name}" || { RESULT_ID=""; fail "${SERVER} did not become ready again"; break 2; }
+                HOST=$(ip_of "${name}")
+            fi
+            # A Class 1 connection the client left open (it opened, and no
+            # Forward_Close succeeded) can hold the target's exclusive owner
+            # past the connection's timeout (OpENer does): the server is
+            # restarted for the next case and client.
+            if [[ "${CASE}" == io-* ]] && jq -e '.forwardOpen.status == 0 and (.forwardClose.status // 0) != 0' <<<"${DOC}" >/dev/null 2>&1; then
+                log "${CLIENT} -> ${SERVER}: ${CASE} left its connection open; restarting ${SERVER}"
+                stop_server "${name}"
+                name=$(start_server "${SERVER}" "${sargs[@]}")
                 wait_ready "${name}" || { RESULT_ID=""; fail "${SERVER} did not become ready again"; break 2; }
                 HOST=$(ip_of "${name}")
             fi
@@ -333,6 +402,7 @@ for SERVER in "${SERVERS[@]}"; do
         done
     done
     stop_server "${name}"
+  done
 done
 
 # ---- the matrix: per server, a row per case, a column per client ----

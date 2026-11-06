@@ -5,8 +5,8 @@ TCP and UDP), providing independent target (adapter) and originator
 (scanner) implementations, deterministic fixtures, and automated
 cross-stack self-tests. Test EtherNet/IP libraries against established
 implementations: OpENer, EIPScanner, cpppo, pycomm3, libplctag, gologix,
-pylogix, etherip, eip-rs, node-ethernet-ip, EEIP.NET and loki-os's
-go-ethernet-ip. Each reference is
+pylogix, etherip, eip-rs, node-ethernet-ip, EEIP.NET, loki-os's
+go-ethernet-ip and cB-Sigma's enip. Each reference is
 containerized behind the same command-line contract, so a library can be
 tested against real implementation diversity without integrating
 third-party protocol stacks into its own code.
@@ -25,6 +25,7 @@ third-party protocol stacks into its own code.
 | `nodeeip` | [node-ethernet-ip](https://github.com/cmseaton42/node-ethernet-ip) 2.0.0 | TypeScript | no | yes | `ghcr.io/otfabric/ethernetip-interop-nodeeip` |
 | `eeip` | [EEIP.NET](https://github.com/rossmann-engineering/EEIP.NET) master `58b91a0` (1.6.0) | C# | no | yes ⁵ | `ghcr.io/otfabric/ethernetip-interop-eeip` |
 | `lokieip` | [go-ethernet-ip (loki-os)](https://github.com/loki-os/go-ethernet-ip) master `535f797` (2022-12-29) | Go | no | yes | `ghcr.io/otfabric/ethernetip-interop-lokieip` |
+| `cbsigma` | [enip (cB-Sigma)](https://github.com/cB-Sigma/enip) 0.2.0 | Go | yes ⁶ | yes ⁷ | `ghcr.io/otfabric/ethernetip-interop-cbsigma` |
 
 ¹ OpENer's sample application, a target with Class 1 I/O; it serves the
 `opener-sample` fixture (its compiled-in identity and assemblies).
@@ -34,6 +35,13 @@ no ListIdentity, no attributes, no tag list.
 ⁴ A Logix tag server with Class 1 I/O, serving the `logix` and `adapter`
 fixtures.
 ⁵ A scanner with Class 1 I/O, T->O multicast and listen-only connections.
+⁶ enip's `server` package (the controller of cB-Sigma's
+[enip-sim](https://github.com/cB-Sigma/enip-sim) since its v0.2.0), serving the
+`logix` and `logix-structures` fixtures: tags, structures, the tag list and
+templates, Class 3 and Class 1 I/O; the identity revision is fixed at 33.11.
+⁷ Explicit messaging, Logix tags over Class 3 with fragmentation, the tag list
+with templates, and Class 1 I/O as scanner (no Forward_Close of I/O
+connections).
 
 The stacks do not all do the same: OpENer has no Multiple Service Packet and
 no Unconnected_Send, EIPScanner no Class 3 and no multicast, cpppo no Class 1

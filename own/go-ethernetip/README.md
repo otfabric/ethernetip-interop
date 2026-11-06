@@ -66,7 +66,7 @@ in a harness release or `manifest.json`.
 Run the **Own stack (go-ethernetip)** workflow by hand, from `main`. It finds the
 latest go-ethernetip release and the latest harness release, and prints them. It
 builds the image, runs the smoke test and the cross-stack self-test against the
-twelve reference images of that harness release on both architectures, then
+thirteen reference images of that harness release on both architectures, then
 publishes `:<go-ethernetip version>` and `:latest`. Run from a branch, it stops
 before publishing. Nothing runs it automatically, so after a go-ethernetip
 release the image stays on the old version until someone does.

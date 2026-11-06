@@ -6,9 +6,12 @@
 #   3  client operations the case needs, separated by spaces
 #   4  client features it needs
 #   5  server features it needs; "logix" means logixTags, and tagList as well
-#      when the client declares tagList (such a client, pycomm3's LogixDriver,
-#      uploads the tag list before it reads or writes a tag); "identity": see
-#      why_not in scripts/interop.sh
+#      for a client that uploads the tag list before it reads or writes a tag
+#      (pycomm3's LogixDriver: TAG_LIST_FIRST in scripts/interop.sh);
+#      "identity": see why_not in scripts/interop.sh
+#   6  optional: the fixture the server serves for the case; absent or "-": the
+#      server's default fixture (print-capabilities .fixtures[0]). A server
+#      that does not serve it records n/a
 list-identity-tcp	ListIdentity (TCP)	list-identity	listIdentityTcp	listIdentityTcp
 list-identity-udp	ListIdentity (UDP)	list-identity	listIdentityUdp	listIdentityUdp
 list-services	ListServices	list-services	listServices	listServices
@@ -27,4 +30,6 @@ io-config-data	Class 1 I/O, configuration data	io get-attribute	class1 configDat
 logix-read	Logix Read Tag (atomic types)	read-tags	logixTags	logix
 logix-fragmented	Logix Read Tag Fragmented	read-tag	readTagFragmented	logix readTagFragmented
 logix-write	Logix Write Tag	write-tag read-tag	logixTags	logix
+logix-write-fragmented	Logix Write Tag Fragmented (a whole array)	write-tag read-tag	logixTags writeTagFragmented readTagFragmented	logix writeTagFragmented readTagFragmented
 tag-list	Logix tag list	tag-list	tagList	tagList
+tag-list-structures	Logix tag list with structures (templates)	tag-list	tagList	tagList templates	logix-structures

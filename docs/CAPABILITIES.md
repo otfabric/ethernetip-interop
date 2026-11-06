@@ -6,7 +6,7 @@ it. Skip, do not fail, a scenario that needs a role, an operation or a
 feature an image does not declare.
 
 A feature is declared `true` when the adapter does it. The ones the
-cross-stack self-test can exercise with the twelve references are exercised
+cross-stack self-test can exercise with the thirteen references are exercised
 there ([COMPATIBILITY.md](COMPATIBILITY.md)); a few cannot be, for want of a
 reference peer, and are marked so below.
 
@@ -34,7 +34,7 @@ One JSON object on one line ([schema](../schemas/capabilities.schema.json)):
 |-------|---------|
 | `adapterVersion` | Release tag the image was built for, `dev` locally |
 | `protocol` | `"ethernetip"` |
-| `upstream` | The stack: name, pinned version and commit, licence, language; `independentEngine`: its protocol engine is its own (true for all twelve references; `false` for OT Fabric's own stack, `own/`, whose results do not count as an independent implementation) |
+| `upstream` | The stack: name, pinned version and commit, licence, language; `independentEngine`: its protocol engine is its own (true for all thirteen references; `false` for OT Fabric's own stack, `own/`, whose results do not count as an independent implementation) |
 | `roles` | `server` (target) and `client` (originator) |
 | `fixtures` | The fixtures `server` serves, the default first; empty without the server role |
 | `clientOperations` | The `client` operations; any other is a usage error |
@@ -59,7 +59,7 @@ One JSON object on one line ([schema](../schemas/capabilities.schema.json)):
 | `logixTags` | Logix Read Tag / Write Tag (`read-tag`, `read-tags`, `write-tag`) | Serves them on the fixture's tags |
 | `readTagFragmented`, `writeTagFragmented` | Uses the fragmented services for arrays (Write Tag Fragmented (0x53) for a write that does not fit one request) | Serves them |
 | `readModifyWrite` | Writes bits of integers and of BOOL arrays with Read-Modify-Write (0x4E) (`write-tag --type BOOL`) | Serves Read-Modify-Write (0x4E) |
-| `tagList` | Reads the tag list (`tag-list`); a client with it (pycomm3) needs it from the server before any tag service | Serves the Symbol object's instance attribute list (0x55) |
+| `tagList` | Reads the tag list (`tag-list`); pycomm3 also needs it from the server before any tag service (the self-test skips its Logix cases against a server without it) | Serves the Symbol object's instance attribute list (0x55) |
 | `templates` | Uploads structure templates and reads and writes structure and STRING tags | Serves Template objects (0x6C) |
 | `configData` | Sends configuration data in the Forward_Open (`io --config-data`) | Applies it to the configuration assembly |
 | `tcpipObject`, `ethernetLinkObject` | | Has the TCP/IP Interface (0xF5) and Ethernet Link (0xF6) objects |
@@ -74,12 +74,12 @@ One JSON object on one line ([schema](../schemas/capabilities.schema.json)):
 | Client (originator) | no | yes | yes | yes |
 | Fixtures served | `opener-sample` | | `logix` | |
 
-| | libplctag | gologix | pylogix | etherip | eiprs | nodeeip | eeip | lokieip |
-|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| Upstream | libplctag 2.7.2 (C) | gologix 0.44.0-beta (Go) | pylogix 1.1.6 (Python) | etherip 1.0-67 (Java) | rseip 0.3.1-2 (Rust) | node-ethernet-ip 2.0.0 (TypeScript) | EEIP.NET 1.6.0 (C#) | go-ethernet-ip 2022-12-29 (Go) |
-| Server (target) | yes (ab_server) | yes | no | no | no | no | no | no |
-| Client (originator) | yes | yes | yes | yes | yes | yes | yes | yes |
-| Fixtures served | `logix` | `logix`, `adapter` | | | | | |  |
+| | libplctag | gologix | pylogix | etherip | eiprs | nodeeip | eeip | lokieip | cbsigma |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| Upstream | libplctag 2.7.2 (C) | gologix 0.44.0-beta (Go) | pylogix 1.1.6 (Python) | etherip 1.0-67 (Java) | rseip 0.3.1-2 (Rust) | node-ethernet-ip 2.0.0 (TypeScript) | EEIP.NET 1.6.0 (C#) | go-ethernet-ip 2022-12-29 (Go) | enip 0.2.0 (Go) |
+| Server (target) | yes (ab_server) | yes | no | no | no | no | no | no | yes |
+| Client (originator) | yes | yes | yes | yes | yes | yes | yes | yes | yes |
+| Fixtures served | `logix` | `logix`, `adapter` | | | | | |  | `logix`, `logix-structures` |
 
 Client operations:
 
@@ -95,17 +95,17 @@ Client operations:
 | `read-tag`, `read-tags`, `write-tag` | | yes | yes |
 | `tag-list` | | | yes |
 
-| Operation | libplctag | gologix | pylogix | etherip | eiprs | nodeeip | eeip | lokieip |
-|-----------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| `list-identity` | | TCP only | UDP only (`Discover()`) | TCP, UDP | TCP, UDP | TCP, UDP | UDP only | TCP only (over its session) |
-| `discover` | | | yes | | | | |  |
-| `list-services` | | yes | | TCP, UDP | TCP only | | | TCP only |
-| `get-attribute`, `set-attribute`, `get-attributes-all` | yes (also `--connected`) | yes (always connected) | yes (unconnected only) | `get-attribute`, `get-attributes-all` only | yes (also `--connected`) | yes (also `--connected`) | yes | yes (also `--connected`, `--route 1/N`) |
-| `multiple-get` | | yes | | | yes | yes | | yes (packed by the adapter) |
-| `identity` | Get_Attributes_All `@1/1` (`@identity` tag) | | `GetModuleProperties` (Unconnected_Send) | etherip's identity (`--route 1/N`: of slot N) | | Get_Attributes_All `@1/1` | Get_Attributes_All `@1/1` |  |
-| `io` | | | | | | | yes |  |
-| `read-tag`, `read-tags`, `write-tag` | yes | yes | yes | yes | yes | yes | | `read-tag`, `read-tags` only |
-| `tag-list` | yes | yes | yes | | yes | yes | | yes |
+| Operation | libplctag | gologix | pylogix | etherip | eiprs | nodeeip | eeip | lokieip | cbsigma |
+|-----------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| `list-identity` | | TCP only | UDP only (`Discover()`) | TCP, UDP | TCP, UDP | TCP, UDP | UDP only | TCP only (over its session) | TCP, UDP (`Discover`, unicast) |
+| `discover` | | | yes | | | | |  |  |
+| `list-services` | | yes | | TCP, UDP | TCP only | | | TCP only |  |
+| `get-attribute`, `set-attribute`, `get-attributes-all` | yes (also `--connected`) | yes (always connected) | yes (unconnected only) | `get-attribute`, `get-attributes-all` only | yes (also `--connected`) | yes (also `--connected`) | yes | yes (also `--connected`, `--route 1/N`) | yes (also `--connected`, `--route`) |
+| `multiple-get` | | yes | | | yes | yes | | yes (packed by the adapter) | yes |
+| `identity` | Get_Attributes_All `@1/1` (`@identity` tag) | | `GetModuleProperties` (Unconnected_Send) | etherip's identity (`--route 1/N`: of slot N) | | Get_Attributes_All `@1/1` | Get_Attributes_All `@1/1` |  |  |
+| `io` | | | | | | | yes |  | yes (no Forward_Close) |
+| `read-tag`, `read-tags`, `write-tag` | yes | yes | yes | yes | yes | yes | | `read-tag`, `read-tags` only | yes (Class 3) |
+| `tag-list` | yes | yes | yes | | yes | yes | | yes | yes (template names) |
 
 Features (client / server; an absent feature is blank, or "–" in a
 client / server cell):
@@ -138,56 +138,58 @@ client / server cell):
 | `tcpipObject`, `ethernetLinkObject` | yes | | – / no | |
 | `errorsCloseSession` | no | | – / yes | |
 
-| Feature | libplctag (client / server) | gologix (client / server) | pylogix (client) | etherip (client) | eiprs (client) | nodeeip (client) | eeip (client) | lokieip (client) |
-|---------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| `listIdentityTcp` | no / no | yes / yes | no | yes | yes | yes | no | yes |
-| `listIdentityUdp` | no / no | no / no | yes | yes | yes | yes | yes | no |
-| `listServices` | no / no | yes / no | no | yes | yes | no | no | yes |
-| `listInterfaces` | – / no | – / no | | | | | |  |
-| `getAttributeSingle` | yes / no | yes / no | yes | yes | yes | yes | yes | yes |
-| `setAttributeSingle` | yes / no | yes / no | yes | no | yes | yes | yes | yes |
-| `getAttributesAll` | yes / no | yes / yes | yes | yes | yes | yes | yes | yes |
-| `getAttributeList` | – / no | – / no | | | | | |  |
-| `multipleService` | no / yes | yes / no | no | no | yes | yes | no | yes |
-| `unconnectedSend` | no / yes | no / yes | yes | yes | yes | no | no | yes |
-| `class3` | yes / yes | yes / yes | no | no | yes | yes | no | yes |
-| `class1` | no / no | no / yes | no | no | no | no | yes | no |
-| `largeForwardOpen` | yes / yes | yes / yes | yes | no | no | yes | yes | no |
-| `multicast` | no / no | no / no | no | no | no | no | yes | no |
-| `inputOnly` | no / no | no / yes | no | no | no | no | yes | no |
-| `listenOnly` | no / no | no / no | no | no | no | no | yes | no |
-| `logixTags` | yes / yes | yes / yes | yes | yes | yes | yes | no | yes |
-| `readTagFragmented` | yes / yes | no / no | yes | no | yes | no | no | no |
-| `writeTagFragmented` | no / yes | no / no | | no | yes | no | | no |
-| `readModifyWrite` | yes / no | no / no | yes | no | yes | yes | | no |
-| `templates` | no / no | no / no | no | no | yes | yes | | no |
-| `configData` | no / no | no / no | | no | no | no | no | no |
-| `tagList` | yes / no | yes / no | yes | no | yes | yes | no | yes |
-| `tcpipObject`, `ethernetLinkObject` | – / no | – / no | | | | | |  |
-| `errorsCloseSession` | – / no | – / yes | | | | | |  |
+| Feature | libplctag (client / server) | gologix (client / server) | pylogix (client) | etherip (client) | eiprs (client) | nodeeip (client) | eeip (client) | lokieip (client) | cbsigma (client / server) |
+|---------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| `listIdentityTcp` | no / no | yes / yes | no | yes | yes | yes | no | yes | yes / yes |
+| `listIdentityUdp` | no / no | no / no | yes | yes | yes | yes | yes | no | yes / yes |
+| `listServices` | no / no | yes / no | no | yes | yes | no | no | yes | no / no |
+| `listInterfaces` | – / no | – / no | | | | | |  | – / no |
+| `getAttributeSingle` | yes / no | yes / no | yes | yes | yes | yes | yes | yes | yes / yes |
+| `setAttributeSingle` | yes / no | yes / no | yes | no | yes | yes | yes | yes | yes / yes |
+| `getAttributesAll` | yes / no | yes / yes | yes | yes | yes | yes | yes | yes | yes / yes |
+| `getAttributeList` | – / no | – / no | | | | | |  | – / no |
+| `multipleService` | no / yes | yes / no | no | no | yes | yes | no | yes | yes / yes |
+| `unconnectedSend` | no / yes | no / yes | yes | yes | yes | no | no | yes | yes / yes |
+| `class3` | yes / yes | yes / yes | no | no | yes | yes | no | yes | yes / yes |
+| `class1` | no / no | no / yes | no | no | no | no | yes | no | yes / yes |
+| `largeForwardOpen` | yes / yes | yes / yes | yes | no | no | yes | yes | no | no / yes |
+| `multicast` | no / no | no / no | no | no | no | no | yes | no | no / no |
+| `inputOnly` | no / no | no / yes | no | no | no | no | yes | no | no / no |
+| `listenOnly` | no / no | no / no | no | no | no | no | yes | no | no / no |
+| `logixTags` | yes / yes | yes / yes | yes | yes | yes | yes | no | yes | yes / yes |
+| `readTagFragmented` | yes / yes | no / no | yes | no | yes | no | no | no | yes / yes |
+| `writeTagFragmented` | no / yes | no / no | | no | yes | no | | no | yes / yes |
+| `readModifyWrite` | yes / no | no / no | yes | no | yes | yes | | no | no / no |
+| `templates` | no / no | no / no | no | no | yes | yes | | no | no / yes |
+| `configData` | no / no | no / no | | no | no | no | no | no | no / no |
+| `tagList` | yes / no | yes / no | yes | no | yes | yes | no | yes | yes / yes |
+| `tcpipObject`, `ethernetLinkObject` | – / no | – / no | | | | | |  | – / no |
+| `errorsCloseSession` | – / no | – / yes | | | | | |  | – / no |
 
-With libplctag (ab_server) and gologix serving too, these declared features
-have a peer among the references: `logixTags` (cpppo, ab_server and gologix
-serve the `logix` fixture), `readTagFragmented` and `writeTagFragmented`
-(cpppo and ab_server; rseip is the one client of Write Tag Fragmented),
-`multipleService` (cpppo, ab_server), `unconnectedSend` (cpppo, ab_server,
-gologix), `class3` and `largeForwardOpen` (all four servers), `class1` and
-`inputOnly` (OpENer, gologix), and OpENer's `multicast` and `listenOnly`
-(EEIP.NET opens both).
+With libplctag (ab_server), gologix and cB-Sigma's enip serving too, these
+declared features have a peer among the references: `logixTags` (cpppo,
+ab_server, gologix and cbsigma serve the `logix` fixture),
+`readTagFragmented` and `writeTagFragmented` (cpppo, ab_server and cbsigma;
+rseip and cbsigma are the clients of Write Tag Fragmented, the
+`logix-write-fragmented` case), `multipleService` (cpppo, ab_server,
+cbsigma), `unconnectedSend` (cpppo, ab_server, gologix, cbsigma), `class3`
+and `largeForwardOpen` (all five servers), `class1` (OpENer, gologix,
+cbsigma; EIPScanner, EEIP.NET and cbsigma as scanners), `inputOnly` (OpENer,
+gologix), OpENer's `multicast` and `listenOnly` (EEIP.NET opens both), and
+`tagList` and `templates` (cbsigma serves both: pycomm3, libplctag, gologix,
+node-ethernet-ip and cbsigma read its tag list and its templates, the
+`tag-list` and `tag-list-structures` cases; pycomm3's Logix features run
+against it, since its `LogixDriver` needs the tag list first).
 
 Not exercised by the self-test, for want of a peer among the references:
-`readModifyWrite` (pycomm3, libplctag, pylogix, rseip, node-ethernet-ip),
-`tagList` (pycomm3, libplctag, gologix, pylogix, rseip, node-ethernet-ip)
-and `templates` (pycomm3, rseip, node-ethernet-ip): no reference server has
-them (ab_server answers 0x55 with 0x08; gologix's server answers it with
-instance id, name and type only, which pycomm3 and gologix's client cannot use). For want of
-a tag list, pycomm3's Logix features (`logixTags`, `readTagFragmented`) are
-not exercised either: its `LogixDriver` needs the tag list first. No
-reference client declares OpENer's and cpppo's `getAttributeList`,
-`listInterfaces`, or OpENer's `tcpipObject` and `ethernetLinkObject`. A
-library under test serving the `logix` and `logix-structures` fixtures can
-exercise them. They are declared from the stacks' sources
-([research notes](#where-these-come-from)).
+`readModifyWrite` (pycomm3, libplctag, pylogix, rseip, node-ethernet-ip) and
+the client side of `templates` (structure and STRING writes: pycomm3, rseip,
+node-ethernet-ip): no reference server serves Read-Modify-Write, and no case
+writes structures. No reference client declares OpENer's and cpppo's
+`getAttributeList`, `listInterfaces`, or OpENer's `tcpipObject` and
+`ethernetLinkObject`. A library under test serving the `logix` and
+`logix-structures` fixtures can exercise them. They are declared from the
+stacks' sources ([research notes](#where-these-come-from)).
 
 ## Quirks by adapter
 
@@ -610,6 +612,64 @@ v0.0.0-20221229063210-535f79752f63; the repository has no tags).
   other structures and BOOL arrays; `programName` null.
 - The upstream repository contains a copy of Rockwell's 1756-PM020 manual;
   it reaches only the build stage (module download), not the image.
+
+### cbsigma
+
+cB-Sigma's [enip](https://github.com/cB-Sigma/enip) v0.2.0 (Apache-2.0, Go).
+The server role is enip's `server` package, which is also the controller of
+cB-Sigma's [enip-sim](https://github.com/cB-Sigma/enip-sim) since its v0.2.0;
+enip-sim itself (a demo tag table and a command) is not linked.
+
+- Server: serves `logix` (default) and `logix-structures`; `adapter` and
+  `opener-sample` exit 4 (enip has input and output assemblies only, and no
+  hook on consumed data for the echo). Templates are defined from the
+  fixture (`DefineStruct`); the template instances are enip's own (0x100 up),
+  not the fixture's `id`. A BOOL array is a DWORD array, as in Logix.
+- Server identity: the revision is fixed at 33.11 whatever the fixture says
+  ([cB-Sigma/enip#1](https://github.com/cB-Sigma/enip/issues/1)); ListIdentity
+  reports the listen address 0.0.0.0 and port 44818 as the socket address
+  ([#6](https://github.com/cB-Sigma/enip/issues/6)), which pylogix drops.
+- Server paths: the Message Router and the Connection Manager are recognised
+  only in the 8-bit form (`20 02 24 01`, `20 06 24 01`); EIPScanner's 16-bit
+  segments get 0x16 ([#2](https://github.com/cB-Sigma/enip/issues/2)).
+  Unconnected_Send needs the route `1/<slot>` exactly; an empty route is
+  refused 0x01 / 0x0312 ([#5](https://github.com/cB-Sigma/enip/issues/5)).
+  Tag names are matched with case ([#4](https://github.com/cB-Sigma/enip/issues/4)).
+- Server, Class 1: the connection path must be class, instance (the
+  configuration assembly, 0 for none) and two connection points; a path
+  without the instance segment is refused 0x01 / 0x0315. The sizes are
+  checked (0x0127 / 0x0128). Forward_Close of a Class 1 connection is answered
+  0x01 / 0x0107 and the connection runs until its timeout
+  ([#3](https://github.com/cB-Sigma/enip/issues/3)). No multicast, input-only,
+  listen-only or configuration data. The Assembly object's attribute 3 and the
+  Class 1 data are two separate stores in enip: what Set_Attribute_Single
+  writes is not produced, and consumed data is not read by
+  Get_Attribute_Single.
+- Server: no ListServices (encapsulation status 0x0001), no Get_Attribute_List
+  outside the Template object, Get_Attributes_All on `@1/1` and class 0x64
+  only. A Read Template at the end of a definition answers success with no
+  data, and attribute 4 is short of pylogix's reading of it: pylogix's tag
+  list of `logix-structures` loops
+  ([#7](https://github.com/cB-Sigma/enip/issues/7)).
+- Client: Logix operations go over a Class 3 connection (enip's `Connected`,
+  Forward_Open, connection size 500), routed to `1/0` unless `--route`; enip
+  falls back to unconnected messaging when the Forward_Open is refused, and
+  the document's `connected` says which was used. `--connected` fails
+  instead of falling back. Arrays are read with Read Tag Fragmented and
+  written with Write Tag Fragmented when they do not fit one request.
+- Client: `read-tags` is one Multiple Service Packet; `tag-list` reads the
+  Symbol object and names each structure from its template (Template object),
+  STRING for the built-in one; `programName` is the controller name
+  (Get_Attributes_All of class 0x64). No `--type STRING`/`JSON` writes, no
+  Read-Modify-Write (`templates`, `readModifyWrite` false).
+- Client, Class 1: enip's `OpenIO`, a Forward_Open (never Large) with the
+  configuration instance always in the path, point-to-point, run mode. enip
+  counts no packets: `sent` and `received` are the container's UDP datagram
+  counters over the exchange (`/proc/net/snmp`). IOConn sends no Forward_Close
+  (documented upstream as not yet done): `forwardClose` is status -1 with an
+  `error`. No configuration data, multicast, input-only or listen-only.
+- `list-identity --transport udp` is enip's `Discover`, sent unicast to
+  `--host:--port`; no ListServices, no `identity` operation.
 
 ## Where these come from
 

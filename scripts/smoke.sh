@@ -115,10 +115,18 @@ if [[ "${serves}" == true ]]; then
     if jq -e '.serverFeatures.listIdentityTcp' <<<"${caps}" >/dev/null 2>&1; then
         doc=$(run_client "${client}" list-identity --host "${ip}"); code=$?
         printf '%s\n' "${doc}" > "${DOCS}/list-identity-from-${client}.json"
-        want=$(jq -c '.identity | {productName, productCode, serialNumber, revision}' "${ROOT}/fixtures/${fixture}/fixture.json")
-        if [[ "${code}" == 0 ]] && jq -e --argjson w "${want}" '.ok and (.identity | {productName, productCode, serialNumber, revision}) == $w' \
+        # A known difference of the pairing for list-identity-tcp
+        # (tests/known-differences.tsv: the target cannot serve the fixture's
+        # revision) leaves the revision out of the comparison.
+        keys='{productName, productCode, serialNumber, revision}' waived=""
+        waived=$(awk -F'\t' -v c="${client}" -v s="${ADAPTER}" '!/^#/ && $1 == c && $2 == s && $3 == "list-identity-tcp" {print $5; exit}' \
+            "${ROOT}/tests/known-differences.tsv")
+        [[ -n "${waived}" ]] && keys='{productName, productCode, serialNumber}'
+        want=$(jq -c ".identity | ${keys}" "${ROOT}/fixtures/${fixture}/fixture.json")
+        if [[ "${code}" == 0 ]] && jq -e --argjson w "${want}" ".ok and (.identity | ${keys}) == \$w" \
                 <<<"${doc}" >/dev/null 2>&1
-        then ok "${client} list-identity answered with the fixture's identity"; else fail "${client} list-identity: exit ${code}, ${doc}"; fi
+        then ok "${client} list-identity answered with the fixture's identity${waived:+ (revision not compared: ${waived})}"
+        else fail "${client} list-identity: exit ${code}, ${doc}"; fi
     elif jq -e '.serverFeatures.logixTags' <<<"${caps}" >/dev/null 2>&1; then
         # A target without ListIdentity (libplctag's ab_server): one of the
         # fixture's scalar tags instead, read by cpppo through slot 0.

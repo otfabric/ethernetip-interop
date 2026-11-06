@@ -21,3 +21,4 @@ coverage.out
 # Output of a bare `go build`, anchored so it can never hide a source folder
 /adapters/gologix/gologix
 /adapters/lokieip/lokieip
+/adapters/cbsigma/cbsigma

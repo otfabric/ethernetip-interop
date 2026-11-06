@@ -15,7 +15,7 @@ to the licence texts. Every reference image is published; the image
 | `adapters/eipscanner/` (links EIPScanner) | MIT |
 | `adapters/pycomm3/` (imports pycomm3) | MIT |
 | `adapters/cpppo/` (imports cpppo) | GPL-3.0-or-later ([adapters/LICENSE](adapters/LICENSE)) |
-| `adapters/libplctag/` (links libplctag), `adapters/gologix/` (links gologix), `adapters/pylogix/`, `adapters/etherip/`, `adapters/eiprs/`, `adapters/nodeeip/`, `adapters/eeip/`, `adapters/lokieip/` (links go-ethernet-ip) | MIT |
+| `adapters/libplctag/` (links libplctag), `adapters/gologix/` (links gologix), `adapters/pylogix/`, `adapters/etherip/`, `adapters/eiprs/`, `adapters/nodeeip/`, `adapters/eeip/`, `adapters/lokieip/` (links go-ethernet-ip), `adapters/cbsigma/` (links cB-Sigma's enip) | MIT |
 | `own/go-ethernetip/` (links go-ethernetip) | MIT |
 | Image `ethernetip-interop-otfabric` | MIT and BSD-3-Clause, as listed below |
 | Image `ethernetip-interop-opener` | MIT and the OpENer licence (adapted BSD, see below), and the licences of the Debian packages |
@@ -30,6 +30,7 @@ to the licence texts. Every reference image is published; the image
 | Image `ethernetip-interop-nodeeip` | MIT, and the licences of Node.js |
 | Image `ethernetip-interop-eeip` | MIT, and the licences of the .NET runtime image |
 | Image `ethernetip-interop-lokieip` | MIT and WTFPL, and the licences of the Debian packages |
+| Image `ethernetip-interop-cbsigma` | MIT and enip and lanbcast (Apache-2.0, with their NOTICE files), and the licences of the Debian packages |
 
 Each adapter is a separate program in a separate image; no image contains two
 implementations. Nothing in this repository is linked into a consumer: a
@@ -210,6 +211,22 @@ Licence in the image: `/licenses/eeip/LICENSE`.
 Licence in the image: `/licenses/go-ethernet-ip/LICENSE`. The upstream
 repository also contains a copy of Rockwell's 1756-PM020 manual (PDF); it is
 not part of the module's code and not in the image.
+
+## Image `ethernetip-interop-cbsigma`
+
+| Component | Version | Licence | Source |
+|-----------|---------|---------|--------|
+| enip ((c) 2026 Abhinav Gautam), compiled in | v0.2.0, `a3cb007728bbaf830cf89b24c3a06bba8075ec3b` (Go module sum `h1:Ym8XUTpJ8IaEEJF4slatHvviJjOuWqgSfZTR6ahWybQ=`) | Apache-2.0 | https://github.com/cB-Sigma/enip |
+| lanbcast ((c) 2026 Abhinav Gautam), compiled in | v0.2.0 (Go module sum `h1:cBr09Cfi5K7bGEqYPhERuvV6qh8EZ4oGTbViKlOsnMs=`) | Apache-2.0 | https://github.com/cB-Sigma/lanbcast |
+| Adapter | this repository, `adapters/cbsigma/` | MIT | https://github.com/otfabric/ethernetip-interop |
+| Base system | Debian trixie-slim | various; see `/usr/share/doc/*/copyright` in the image | https://www.debian.org |
+
+Licences and notices in the image: `/licenses/enip/LICENSE`,
+`/licenses/enip/NOTICE`, `/licenses/lanbcast/LICENSE`,
+`/licenses/lanbcast/NOTICE`. The server role is enip's `server` package, which
+is also the controller of cB-Sigma's
+[enip-sim](https://github.com/cB-Sigma/enip-sim) (Apache-2.0) since its v0.2.0;
+enip-sim itself is not in the image.
 
 ## Images in general
 
