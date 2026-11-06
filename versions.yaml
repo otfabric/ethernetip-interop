@@ -4,7 +4,7 @@
 # requirements.txt of the Python adapters are the source of truth for a
 # build: scripts/check-versions.sh fails when this file disagrees with them.
 
-interop_version: "0.6.1"
+interop_version: "0.7.0"
 contract_version: "1.0"        # docs/CONTAINER_CONTRACT.md; documents carry schemaVersion "1.0", the compatible line
 fixture_schema: "1.0"          # fixtures/schema/ethernetip-fixture.schema.json
 
@@ -236,13 +236,30 @@ implementations:
       UDP, no Class 1, no fragmented services, no templates. The upstream
       repository carries a Rockwell PDF; it is not in the image.
 
+# OT Fabric's own stacks. Not independent implementations, not in a release of
+# this repository or its manifest.json: see own/<library>/README.md.
+own_implementations:
+  otfabric:
+    upstream: "go-ethernetip"
+    repository: "https://github.com/otfabric/go-ethernetip"
+    artifact: "go:github.com/otfabric/go-ethernetip"
+    version: "latest release, resolved when the image is built by hand"
+    license: "MIT"
+    language: "Go"
+    independent_engine: false
+    roles: [server, client]
+    image: "ghcr.io/otfabric/ethernetip-interop-otfabric"
+    build: "own/go-ethernetip"
+
 base_images:
   # Digests recorded 2026-10-19 (the same as dnp3-interop); the Dockerfiles pin these by digest.
+  # used by: opener, eipscanner, libplctag, gologix, lokieip, eiprs, otfabric (own/go-ethernetip)
   debian_trixie_slim: "docker.io/library/debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f"
   python_3_14_8_slim_trixie: "docker.io/library/python:3.14.8-slim-trixie@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170"
   # Recorded 2026-10-26 for the v0.3.0 adapters.
   maven_3_9_11_temurin_21_noble: "docker.io/library/maven:3.9.11-eclipse-temurin-21-noble@sha256:6fdc855a6ed81d288ca7ca37ac6ff5e9308b612485c0801d70b25a858c83d237"
   temurin_21_0_8_jre_noble: "docker.io/library/eclipse-temurin:21.0.8_9-jre-noble@sha256:20e7f7288e1c18eebe8f06a442c9f7183342d9b022d3b9a9677cae2b558ddddd"
+  # used by: gologix, lokieip, otfabric (own/go-ethernetip)
   golang_1_27_3_trixie: "docker.io/library/golang:1.27.3-trixie@sha256:fbb7ae40b62ff8afe31662df570d39b4f5052ac32b90dae8e60d7657a20a74f4"
   rust_1_98_1_slim_trixie: "docker.io/library/rust:1.98.1-slim-trixie@sha256:4cd829461bd5c4d511c32e269da9cb8929223b666519d8004e35fc8d1d771ab7"
   node_24_22_1_trixie_slim: "docker.io/library/node:24.22.1-trixie-slim@sha256:43b9ba1142b8dcf33fa8f922ca1be85714adc444e0586c7cf7726daaeabc1bea"

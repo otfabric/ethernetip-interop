@@ -16,11 +16,31 @@ one section per version, newest first, each ending with a `---` line, and no
 
 Tags are immutable. A fix is a new version.
 
+The `ethernetip-interop-otfabric` image is not part of these releases. It has its own
+manual workflow and no releases (`own/go-ethernetip/README.md`).
+
 | What changed | Version |
 |--------------|---------|
 | Contract or fixture format changed incompatibly | major |
 | New operation, behaviour, fixture, adapter or document field | minor |
 | Upstream pin, base image or bug fix with unchanged contract | patch |
+
+---
+
+## v0.7.0
+
+**Date:** 2026-11-06
+**Previous release:** v0.6.1
+
+### Added
+
+- `own/go-ethernetip` and the manual workflow **Own stack (go-ethernetip)**: OT Fabric's go-ethernetip behind the container contract, published as `ghcr.io/otfabric/ethernetip-interop-otfabric` with go-ethernetip versions as tags. It is not an independent implementation and not part of this or any release, nor of `manifest.json`.
+- The scripts take an image through `ADAPTER_IMAGE_<adapter>`, and `results.json` records whether an image is an independent implementation from what it says of itself.
+- `make documents`: the smoke and cross-stack self-tests with every document validated.
+
+### Changed
+
+- The repository layout of the other OT Fabric harnesses: `scripts/selftest.sh` is `scripts/interop.sh` (`make interop`, documents in `reports/interop/`, result ids `interop.<case>`), its cases are in `tests/cases.tsv`, and `scripts/known-bugs.tsv` and `scripts/selftest-known.tsv` are `tests/known-bugs.tsv` and `tests/known-differences.tsv`. The images and the contract are unchanged.
 
 ---
 

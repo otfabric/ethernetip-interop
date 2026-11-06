@@ -44,7 +44,7 @@ explicit-messaging client).
 
 | Item | Value |
 |------|-------|
-| Image | `ghcr.io/otfabric/ethernetip-interop-<adapter>`: `opener`, `eipscanner`, `cpppo`, `pycomm3`, `libplctag`, `gologix`, `pylogix`, `etherip`, `eiprs`, `nodeeip`, `eeip`, `lokieip` |
+| Image | `ghcr.io/otfabric/ethernetip-interop-<adapter>`: `opener`, `eipscanner`, `cpppo`, `pycomm3`, `libplctag`, `gologix`, `pylogix`, `etherip`, `eiprs`, `nodeeip`, `eeip`, `lokieip`; OT Fabric's own stack is the adapter `otfabric` (`own/go-ethernetip/README.md`) |
 | Entrypoint | `ethernetip-interop` (`/usr/local/bin/ethernetip-interop`) |
 | Default command | `server` for images with the server role (opener, cpppo, libplctag, gologix), `print-capabilities` for the others |
 | Ports | 44818/tcp and 44818/udp (encapsulation: explicit messaging, ListIdentity, ListServices; libplctag's and gologix's servers: TCP only); 2222/udp (Class 1 I/O; the opener and gologix images) |

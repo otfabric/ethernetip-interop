@@ -34,7 +34,7 @@ One JSON object on one line ([schema](../schemas/capabilities.schema.json)):
 |-------|---------|
 | `adapterVersion` | Release tag the image was built for, `dev` locally |
 | `protocol` | `"ethernetip"` |
-| `upstream` | The stack: name, pinned version and commit, licence, language; `independentEngine`: its protocol engine is its own (true for all twelve) |
+| `upstream` | The stack: name, pinned version and commit, licence, language; `independentEngine`: its protocol engine is its own (true for all twelve references; `false` for OT Fabric's own stack, `own/`, whose results do not count as an independent implementation) |
 | `roles` | `server` (target) and `client` (originator) |
 | `fixtures` | The fixtures `server` serves, the default first; empty without the server role |
 | `clientOperations` | The `client` operations; any other is a usage error |

@@ -63,7 +63,7 @@ the pin the release build is unchanged (archive SHA-256, `pip
 verify`), any other value takes a candidate path that has no recorded hash
 to check and says `candidate build: ...` on stderr. Known bugs of a
 candidate's upstream version go in
-[scripts/known-bugs.tsv](../scripts/known-bugs.tsv): a listed case that
+[tests/known-bugs.tsv](../tests/known-bugs.tsv): a listed case that
 fails is recorded as known, so one upstream bug does not hide whether
 everything else works.
 
@@ -82,22 +82,22 @@ and record the change in this file and in `RELEASE.md`.
 
 ## Cross-stack matrix
 
-`make selftest` (`scripts/selftest.sh`) starts each server image (opener,
+`make interop` (`scripts/interop.sh`) starts each server image (opener,
 cpppo, libplctag, gologix) with its first fixture on a private Docker
 network and runs every client image against it, case by case. A case runs
 when the client has the operation and both sides declare the features it
 needs; otherwise it is n/a, with the reason in `summary.tsv`. Expected values
 come from the server's fixture. A server that a case brings down is
 restarted, and the crash is recorded against that case. Every result
-document is kept under `reports/selftest/` and validated against
+document is kept under `reports/interop/` and validated against
 `schemas/client-result.schema.json`.
 
 Some declared features do not work between two particular references. These
 **known incompatibilities** are listed, each with its reason, in
-[scripts/selftest-known.tsv](../scripts/selftest-known.tsv) (and described in
+[tests/known-differences.tsv](../tests/known-differences.tsv) (and described in
 [CAPABILITIES.md](CAPABILITIES.md)): such a case is recorded `known` and does
 not fail the self-test; one that starts passing fails the run, so that its
-entry is removed. `reports/selftest/results.json` is the run as
+entry is removed. `reports/interop/results.json` is the run as
 [interop-result-v1](../schemas/interop-result-v1.schema.json), with these
 outcomes: pass, fail, known-difference, unsupported (n/a: a side does not
 declare it), not-tested (the fixture lacks what the case needs). A run with no
