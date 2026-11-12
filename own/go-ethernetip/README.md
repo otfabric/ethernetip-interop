@@ -32,7 +32,7 @@ Class 1 I/O needs your originator on the same Docker network, without NAT
 ([Networking](../../docs/CONTAINER_CONTRACT.md#networking)); explicit messaging
 also works through `-p 127.0.0.1:44818:44818`.
 
-`<tag>` is a go-ethernetip version such as `v0.5.0`, or `latest`, the newest one
+`<tag>` is a go-ethernetip version such as `v0.5.2`, or `latest`, the newest one
 published. A rebuild of a version replaces its tag, so pin the digest if you need
 an exact build. The digest is in the summary of the
 [workflow run](https://github.com/otfabric/ethernetip-interop/actions/workflows/own-go-ethernetip.yml),
