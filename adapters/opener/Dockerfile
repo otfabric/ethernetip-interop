@@ -9,13 +9,13 @@
 # pinned commit, verified by its SHA-256, mirrored in versions.yaml.
 
 ARG BASE_REGISTRY=docker.io/library
-ARG DEBIAN_DIGEST=sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f
+ARG DEBIAN_DIGEST=sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2
 
 FROM ${BASE_REGISTRY}/debian:trixie-slim@${DEBIAN_DIGEST} AS build
-ARG UPSTREAM_SHA=0e1ab7ee5c272950c0dc8daf7793008d7a518912
-ARG UPSTREAM_SHA256=5b01333bdc300c1410cf9e02d33a564320b7a6094786a047065a7ec14b21d945
+ARG UPSTREAM_SHA=fb90c9918081c184b1876ce0c893168cf8b5653c
+ARG UPSTREAM_SHA256=b8678978fa0bb436b47ae6e703a3e12b2c4cbd8fc612f8b54ef79171febd699f
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential cmake libcap-dev ca-certificates curl \
+    && apt-get install -y --no-install-recommends build-essential cmake ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 # The pins of this file, to tell the release build from a candidate build.
@@ -44,13 +44,13 @@ RUN cmake -DCMAKE_C_COMPILER=gcc -DOpENer_PLATFORM=POSIX -DCMAKE_BUILD_TYPE=Rele
     && install -m 755 src/ports/POSIX/OpENer /usr/local/bin/OpENer
 
 FROM ${BASE_REGISTRY}/debian:trixie-slim@${DEBIAN_DIGEST}
-ARG UPSTREAM_SHA=0e1ab7ee5c272950c0dc8daf7793008d7a518912
-ARG UPSTREAM_VERSION=2.3-591
+ARG UPSTREAM_SHA=fb90c9918081c184b1876ce0c893168cf8b5653c
+ARG UPSTREAM_VERSION=2.3-592
 ARG ADAPTER_VERSION=dev
 ENV ETHERNETIP_INTEROP_ADAPTER_VERSION=${ADAPTER_VERSION} ETHERNETIP_INTEROP_UPSTREAM_REVISION=${UPSTREAM_SHA} \
     ETHERNETIP_INTEROP_UPSTREAM_VERSION=${UPSTREAM_VERSION}
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libcap2 iproute2 \
+    && apt-get install -y --no-install-recommends iproute2 \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /usr/local/bin/OpENer /usr/local/bin/OpENer
 COPY --from=build /src/license.txt /licenses/opener/license.txt

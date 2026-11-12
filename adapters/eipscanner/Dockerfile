@@ -8,7 +8,7 @@
 # source archive of the pinned commit, verified by its SHA-256.
 
 ARG BASE_REGISTRY=docker.io/library
-ARG DEBIAN_DIGEST=sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f
+ARG DEBIAN_DIGEST=sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2
 
 FROM ${BASE_REGISTRY}/debian:trixie-slim@${DEBIAN_DIGEST} AS build
 ARG UPSTREAM_SHA=12c89a57ec2e7449efb1348be52af10be9ef9701

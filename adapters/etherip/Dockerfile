@@ -11,10 +11,10 @@
 # compiled against the built jar and runs on a Temurin JRE.
 
 ARG BASE_REGISTRY=docker.io/library
-ARG MAVEN_DIGEST=sha256:6fdc855a6ed81d288ca7ca37ac6ff5e9308b612485c0801d70b25a858c83d237
-ARG JRE_DIGEST=sha256:20e7f7288e1c18eebe8f06a442c9f7183342d9b022d3b9a9677cae2b558ddddd
+ARG MAVEN_DIGEST=sha256:99e61abcff91a9b1333463bd8451fb18495d6eba9250ac66a338b518f8278320
+ARG JRE_DIGEST=sha256:0d57a8e90c2bb844c5a8e1b2b71e11eff06dad7edcfd803cd21ed4ae203b2515
 
-FROM ${BASE_REGISTRY}/maven:3.9.11-eclipse-temurin-21-noble@${MAVEN_DIGEST} AS build
+FROM ${BASE_REGISTRY}/maven:3.9.16-eclipse-temurin-21-noble@${MAVEN_DIGEST} AS build
 ARG UPSTREAM_SHA=ce0688ae51be5652ec200fbe389667b36a638323
 ARG UPSTREAM_SHA256=35ad2cbb710be5bef6cae0b2441a9397534249ddb33e9ac4e1e377b2e6546c7e
 WORKDIR /src/etherip
@@ -37,7 +37,7 @@ RUN set -eu; \
     tar xzf etherip.tar.gz --strip-components=1; \
     rm etherip.tar.gz
 # The tests need a PLC: skipped (and not compiled, so JUnit is not fetched).
-# The plugins are Maven 3.9.11's default bindings plus the versions the pom pins.
+# The plugins are Maven 3.9.16's default bindings plus the versions the pom pins.
 RUN mvn -B -q -Dmaven.test.skip=true package \
     && if [ -e /tmp/candidate ]; then cp target/etherip-*.jar /src/etherip.jar; \
        else cp target/etherip-1.0.0.jar /src/etherip.jar; fi
@@ -47,7 +47,7 @@ RUN mkdir -p /src/adapter/classes \
         /src/adapter/src/interop/*.java \
     && jar --create --file /src/adapter.jar -C /src/adapter/classes .
 
-FROM ${BASE_REGISTRY}/eclipse-temurin:21.0.8_9-jre-noble@${JRE_DIGEST}
+FROM ${BASE_REGISTRY}/eclipse-temurin:21.0.13_9-jre-noble@${JRE_DIGEST}
 ARG UPSTREAM_SHA=ce0688ae51be5652ec200fbe389667b36a638323
 ARG UPSTREAM_VERSION=1.0-67
 ARG ADAPTER_VERSION=dev

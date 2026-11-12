@@ -13,19 +13,19 @@ third-party protocol stacks into its own code.
 
 | Adapter | Implementation | Language | Server (target) | Client (originator) | Image |
 |---------|----------------|----------|:------:|:------:|-------|
-| `opener` | [OpENer](https://github.com/EIPStackGroup/OpENer) master `0e1ab7e` (v2.3-591) | C | yes ¹ | no | `ghcr.io/otfabric/ethernetip-interop-opener` |
+| `opener` | [OpENer](https://github.com/EIPStackGroup/OpENer) master `fb90c99` (v2.3-592) | C | yes ¹ | no | `ghcr.io/otfabric/ethernetip-interop-opener` |
 | `eipscanner` | [EIPScanner](https://github.com/nimbuscontrols/EIPScanner) master `12c89a5` (1.3.0-33) | C++ | no | yes | `ghcr.io/otfabric/ethernetip-interop-eipscanner` |
 | `cpppo` | [cpppo](https://github.com/pjkundert/cpppo) 5.2.5 | Python | yes ² | yes | `ghcr.io/otfabric/ethernetip-interop-cpppo` |
 | `pycomm3` | [pycomm3](https://github.com/ottowayi/pycomm3) 1.2.16 | Python | no | yes | `ghcr.io/otfabric/ethernetip-interop-pycomm3` |
 | `libplctag` | [libplctag](https://github.com/libplctag/libplctag) 2.7.2 | C | yes ³ | yes | `ghcr.io/otfabric/ethernetip-interop-libplctag` |
 | `gologix` | [gologix](https://github.com/danomagnum/gologix) 0.44.0-beta | Go | yes ⁴ | yes | `ghcr.io/otfabric/ethernetip-interop-gologix` |
-| `pylogix` | [pylogix](https://github.com/dmroeder/pylogix) 1.1.6 | Python | no | yes | `ghcr.io/otfabric/ethernetip-interop-pylogix` |
+| `pylogix` | [pylogix](https://github.com/dmroeder/pylogix) 1.1.7 | Python | no | yes | `ghcr.io/otfabric/ethernetip-interop-pylogix` |
 | `etherip` | [etherip](https://github.com/ornl-epics/etherip) main `ce0688a` (V1.0-67) | Java | no | yes | `ghcr.io/otfabric/ethernetip-interop-etherip` |
 | `eiprs` | [eip-rs (rseip)](https://github.com/Joylei/eip-rs) main `16e2236` (0.3.1-2) | Rust | no | yes | `ghcr.io/otfabric/ethernetip-interop-eiprs` |
 | `nodeeip` | [node-ethernet-ip](https://github.com/cmseaton42/node-ethernet-ip) 2.0.0 | TypeScript | no | yes | `ghcr.io/otfabric/ethernetip-interop-nodeeip` |
 | `eeip` | [EEIP.NET](https://github.com/rossmann-engineering/EEIP.NET) master `58b91a0` (1.6.0) | C# | no | yes ⁵ | `ghcr.io/otfabric/ethernetip-interop-eeip` |
 | `lokieip` | [go-ethernet-ip (loki-os)](https://github.com/loki-os/go-ethernet-ip) master `535f797` (2022-12-29) | Go | no | yes | `ghcr.io/otfabric/ethernetip-interop-lokieip` |
-| `cbsigma` | [enip (cB-Sigma)](https://github.com/cB-Sigma/enip) 0.2.0 | Go | yes ⁶ | yes ⁷ | `ghcr.io/otfabric/ethernetip-interop-cbsigma` |
+| `cbsigma` | [enip (cB-Sigma)](https://github.com/cB-Sigma/enip) 0.2.1 | Go | yes ⁶ | yes ⁷ | `ghcr.io/otfabric/ethernetip-interop-cbsigma` |
 
 ¹ OpENer's sample application, a target with Class 1 I/O; it serves the
 `opener-sample` fixture (its compiled-in identity and assemblies).
@@ -38,7 +38,7 @@ fixtures.
 ⁶ enip's `server` package (the controller of cB-Sigma's
 [enip-sim](https://github.com/cB-Sigma/enip-sim) since its v0.2.0), serving the
 `logix` and `logix-structures` fixtures: tags, structures, the tag list and
-templates, Class 3 and Class 1 I/O; the identity revision is fixed at 33.11.
+templates, Class 3 and Class 1 I/O.
 ⁷ Explicit messaging, Logix tags over Class 3 with fragmentation, the tag list
 with templates, and Class 1 I/O as scanner (no Forward_Close of I/O
 connections).

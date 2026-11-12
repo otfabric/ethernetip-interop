@@ -69,14 +69,14 @@ One JSON object on one line ([schema](../schemas/capabilities.schema.json)):
 
 | | opener | eipscanner | cpppo | pycomm3 |
 |---|:-:|:-:|:-:|:-:|
-| Upstream | OpENer 2.3-591 (C) | EIPScanner 1.3.0-33 (C++) | cpppo 5.2.5 (Python) | pycomm3 1.2.16 (Python) |
+| Upstream | OpENer 2.3-592 (C) | EIPScanner 1.3.0-33 (C++) | cpppo 5.2.5 (Python) | pycomm3 1.2.16 (Python) |
 | Server (target) | yes | no | yes | no |
 | Client (originator) | no | yes | yes | yes |
 | Fixtures served | `opener-sample` | | `logix` | |
 
 | | libplctag | gologix | pylogix | etherip | eiprs | nodeeip | eeip | lokieip | cbsigma |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| Upstream | libplctag 2.7.2 (C) | gologix 0.44.0-beta (Go) | pylogix 1.1.6 (Python) | etherip 1.0-67 (Java) | rseip 0.3.1-2 (Rust) | node-ethernet-ip 2.0.0 (TypeScript) | EEIP.NET 1.6.0 (C#) | go-ethernet-ip 2022-12-29 (Go) | enip 0.2.0 (Go) |
+| Upstream | libplctag 2.7.2 (C) | gologix 0.44.0-beta (Go) | pylogix 1.1.7 (Python) | etherip 1.0-67 (Java) | rseip 0.3.1-2 (Rust) | node-ethernet-ip 2.0.0 (TypeScript) | EEIP.NET 1.6.0 (C#) | go-ethernet-ip 2022-12-29 (Go) | enip 0.2.0 (Go) |
 | Server (target) | yes (ab_server) | yes | no | no | no | no | no | no | yes |
 | Client (originator) | yes | yes | yes | yes | yes | yes | yes | yes | yes |
 | Fixtures served | `logix` | `logix`, `adapter` | | | | | |  | `logix`, `logix-structures` |
@@ -236,6 +236,10 @@ stacks' sources ([research notes](#where-these-come-from)).
   EIPScanner's request encoder; EIPScanner has no helper for it.
 - `io --config-data`: the adapter appends the data segment to EIPScanner's
   connection path (EIPScanner has no parameter for it).
+- `io`: EIPScanner takes the connection path from its caller; the adapter
+  always puts the configuration instance segment in it, `24 00` for
+  `--config 0`, as EEIP.NET, cB-Sigma's enip and go-ethernetip do (cB-Sigma's
+  target refuses a path without it, 0x0315).
 - `io`: EIPScanner binds UDP 2222 itself and sends no T->O socket address
   item, so the target sends T->O to the originator's address. It reports a
   refused Forward_Open only in its log: the adapter reports `status` -1,
@@ -615,7 +619,7 @@ v0.0.0-20221229063210-535f79752f63; the repository has no tags).
 
 ### cbsigma
 
-cB-Sigma's [enip](https://github.com/cB-Sigma/enip) v0.2.0 (Apache-2.0, Go).
+cB-Sigma's [enip](https://github.com/cB-Sigma/enip) v0.2.1 (Apache-2.0, Go).
 The server role is enip's `server` package, which is also the controller of
 cB-Sigma's [enip-sim](https://github.com/cB-Sigma/enip-sim) since its v0.2.0;
 enip-sim itself (a demo tag table and a command) is not linked.
@@ -625,35 +629,37 @@ enip-sim itself (a demo tag table and a command) is not linked.
   hook on consumed data for the echo). Templates are defined from the
   fixture (`DefineStruct`); the template instances are enip's own (0x100 up),
   not the fixture's `id`. A BOOL array is a DWORD array, as in Logix.
-- Server identity: the revision is fixed at 33.11 whatever the fixture says
-  ([cB-Sigma/enip#1](https://github.com/cB-Sigma/enip/issues/1)); ListIdentity
-  reports the listen address 0.0.0.0 and port 44818 as the socket address
-  ([#6](https://github.com/cB-Sigma/enip/issues/6)), which pylogix drops.
+- Server identity: the fixture's, revision included (the adapter passes it to
+  `SetIdentity`; up to v0.2.0 it was fixed at 33.11,
+  [cB-Sigma/enip#1](https://github.com/cB-Sigma/enip/issues/1)). ListIdentity
+  reports the interface the request reached and the listen port as the
+  socket address (0.0.0.0 and 44818 up to v0.2.0,
+  [#6](https://github.com/cB-Sigma/enip/issues/6)).
 - Server paths: the Message Router and the Connection Manager are recognised
-  only in the 8-bit form (`20 02 24 01`, `20 06 24 01`); EIPScanner's 16-bit
-  segments get 0x16 ([#2](https://github.com/cB-Sigma/enip/issues/2)).
-  Unconnected_Send needs the route `1/<slot>` exactly; an empty route is
-  refused 0x01 / 0x0312 ([#5](https://github.com/cB-Sigma/enip/issues/5)).
-  Tag names are matched with case ([#4](https://github.com/cB-Sigma/enip/issues/4)).
+  in the 8-bit and the 16-bit forms (since v0.2.1,
+  [#2](https://github.com/cB-Sigma/enip/issues/2)). Unconnected_Send takes the
+  route `1/<slot>` or an empty route (since v0.2.1,
+  [#5](https://github.com/cB-Sigma/enip/issues/5)). Tag names are not
+  case-sensitive (since v0.2.1, [#4](https://github.com/cB-Sigma/enip/issues/4)).
 - Server, Class 1: the connection path must be class, instance (the
   configuration assembly, 0 for none) and two connection points; a path
   without the instance segment is refused 0x01 / 0x0315. The sizes are
-  checked (0x0127 / 0x0128). Forward_Close of a Class 1 connection is answered
-  0x01 / 0x0107 and the connection runs until its timeout
-  ([#3](https://github.com/cB-Sigma/enip/issues/3)). The inactivity timer is
-  reset only by a new O->T CIP sequence count: an originator that repeats it
-  for unchanged data (go-ethernetip) is dropped after a few packets
-  ([#8](https://github.com/cB-Sigma/enip/issues/8)). No multicast, input-only,
+  checked (0x0127 / 0x0128). Forward_Close of a Class 1 connection closes it
+  (since v0.2.1, [#3](https://github.com/cB-Sigma/enip/issues/3)). The
+  inactivity timer is refreshed by every O->T packet in encapsulation
+  sequence order (since v0.2.1, [#8](https://github.com/cB-Sigma/enip/issues/8);
+  up to v0.2.0 only a new CIP sequence count reset it). No multicast, input-only,
   listen-only or configuration data. The Assembly object's attribute 3 and the
   Class 1 data are two separate stores in enip: what Set_Attribute_Single
   writes is not produced, and consumed data is not read by
   Get_Attribute_Single.
 - Server: no ListServices (encapsulation status 0x0001), no Get_Attribute_List
   outside the Template object, Get_Attributes_All on `@1/1` and class 0x64
-  only. A Read Template at the end of a definition answers success with no
-  data, and attribute 4 is short of pylogix's reading of it: pylogix's tag
-  list of `logix-structures` loops
-  ([#7](https://github.com/cB-Sigma/enip/issues/7)).
+  only. A Read Template at or past the end of a definition is answered
+  0xFF / 0x2104, and attribute 4 covers pylogix's reading of it (since v0.2.1,
+  [#7](https://github.com/cB-Sigma/enip/issues/7)); pylogix still reads past
+  the end and fails to decode the tag list of `logix-structures`, as against
+  the own image.
 - Client: Logix operations go over a Class 3 connection (enip's `Connected`,
   Forward_Open, connection size 500), routed to `1/0` unless `--route`; enip
   falls back to unconnected messaging when the Forward_Open is refused, and

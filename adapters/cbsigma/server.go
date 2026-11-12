@@ -101,10 +101,11 @@ func newController(f *fixture) (*controller, error) {
 	// and the tag list reports as the program name.
 	s.ControllerName = f.Name
 	s.Slot = byte(f.Slot)
-	// enip's identity object has no revision: it serves 33.11 whatever
-	// the fixture says (docs/CAPABILITIES.md, cbsigma).
+	// Since enip v0.2.1 the identity's revision follows SetIdentity
+	// (Revision "major.minor"); before it was a fixed 33.11.
 	s.SetIdentity(enip.Identity{Protocol: 1, Vendor: f.Identity.VendorID, DeviceType: f.Identity.DeviceType,
-		ProductCode: f.Identity.ProductCode, ProductName: f.Identity.ProductName, State: 3}, f.Identity.SerialNumber)
+		ProductCode: f.Identity.ProductCode, Revision: f.Identity.Revision, ProductName: f.Identity.ProductName,
+		State: 3}, f.Identity.SerialNumber)
 	for _, a := range f.Assemblies {
 		switch a.Kind {
 		case "input", "output":
