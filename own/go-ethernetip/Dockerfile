@@ -12,12 +12,12 @@
 # main. go.mod and go.sum here are only a starting point for local work.
 
 ARG BASE_REGISTRY=docker.io/library
-# golang:1.27.3-trixie and debian:trixie-slim, as versions.yaml base_images, multi-arch indexes
+# golang:1.27.4-trixie and debian:trixie-slim, as versions.yaml base_images, multi-arch indexes
 # (linux/amd64 and linux/arm64).
-ARG GOLANG_DIGEST=sha256:fbb7ae40b62ff8afe31662df570d39b4f5052ac32b90dae8e60d7657a20a74f4
-ARG DEBIAN_DIGEST=sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f
+ARG GOLANG_DIGEST=sha256:b54b2639de8c1bfe538ec5ffc45f29b1932235ac5f6d63c059853646677112d9
+ARG DEBIAN_DIGEST=sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2
 
-FROM ${BASE_REGISTRY}/golang:1.27.3-trixie@${GOLANG_DIGEST} AS build
+FROM ${BASE_REGISTRY}/golang:1.27.4-trixie@${GOLANG_DIGEST} AS build
 
 ARG UPSTREAM_VERSION
 ARG UPSTREAM_SHA

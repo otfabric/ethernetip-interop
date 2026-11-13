@@ -27,6 +27,22 @@ manual workflow and no releases (`own/go-ethernetip/README.md`).
 
 ---
 
+## v0.8.2
+
+**Date:** 2026-11-13
+**Previous release:** v0.8.1
+
+### Changed
+
+- `cbsigma`: cB-Sigma's enip v0.2.1 (was v0.2.0), which fixes the eight issues this harness reported ([cB-Sigma/enip#1](https://github.com/cB-Sigma/enip/issues/1)–[#8](https://github.com/cB-Sigma/enip/issues/8); tracking #18–#24, #27). The adapter now passes the fixture's identity revision to `SetIdentity`. The 43 entries that no longer reproduce are gone (five of them the own image's `otfabric -> cbsigma`, checked with go-ethernetip v0.6.0) from `tests/known-differences.tsv`. The remaining `cbsigma` pairings get the reason that now applies: libplctag's 1-word Unconnected_Send route (`get-attributes-all`), rseip's tag list without dimensions and pylogix reading the template past its end (`tag-list-structures`). The scanner still sends no Forward_Close for I/O connections.
+- `eipscanner`: the adapter always puts the configuration instance segment in the Class 1 connection path, `24 00` for `--config 0`, as EEIP.NET, cB-Sigma's enip and go-ethernetip do. cB-Sigma's target refuses a path without it (0x0315). EIPScanner → cbsigma Class 1 I/O now passes.
+- `opener`: OpENer master v2.3-592 (`fb90c99`, was v2.3-591), which drops the libcap dependency. libcap is no longer installed in the image.
+- `pylogix`: 1.1.7 (was 1.1.6): a fix for UDT values in Multiple Service Packet reads.
+- Base images: golang 1.27.4, Python 3.14.10 slim-trixie, Rust 1.100.0, Node.js 24.22.3, Maven 3.9.16 with Temurin 21, the Temurin 21.0.13 JRE, and new digests of Debian trixie-slim and .NET 10 SDK and runtime (recorded 2026-11-12). Closes #9.
+- Cross-stack self-test: 369 passed, 0 failed, 46 known incompatibilities (was 328 passed, 86 known).
+
+---
+
 ## v0.8.1
 
 **Date:** 2026-11-06

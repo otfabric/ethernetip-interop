@@ -10,25 +10,25 @@ any library that consumes the images.
 
 | Adapter | Upstream | Pinned | Pin | Engine |
 |---------|----------|--------|-----|--------|
-| `opener` | [OpENer](https://github.com/EIPStackGroup/OpENer) | master, v2.3-591 | commit `0e1ab7ee5c272950c0dc8daf7793008d7a518912`, GitHub archive SHA-256 `5b01333bdc300c1410cf9e02d33a564320b7a6094786a047065a7ec14b21d945` | independent, C |
+| `opener` | [OpENer](https://github.com/EIPStackGroup/OpENer) | master, v2.3-592 | commit `fb90c9918081c184b1876ce0c893168cf8b5653c`, GitHub archive SHA-256 `b8678978fa0bb436b47ae6e703a3e12b2c4cbd8fc612f8b54ef79171febd699f` | independent, C |
 | `eipscanner` | [EIPScanner](https://github.com/nimbuscontrols/EIPScanner) | master, 1.3.0-33 | commit `12c89a57ec2e7449efb1348be52af10be9ef9701`, GitHub archive SHA-256 `3efbb95bff91501328b5899dd635cfee61ec11f59f3ad7609812fb65211ddc63` | independent, C++ |
 | `cpppo` | [cpppo](https://github.com/pjkundert/cpppo) | 5.2.5 | PyPI wheel SHA-256 `0257ba393f1e2bdd06ea712cead740e496c802b3e5275c1995ee2df31f29ed1c` (tag commit `f7c224bbb2389bd26d0088eeb1a93db3a5c4858f`); greenery 2.1, sdist SHA-256 `759c3bf40b6fe6ef0a6b373230d07470e0e315f32bcdbaf381901b0d8a6f91d1` | independent, Python |
 | `pycomm3` | [pycomm3](https://github.com/ottowayi/pycomm3) | 1.2.16 | PyPI wheel SHA-256 `88e95c70472154ee32233f76af126526db208830e1e803eb9f621c8bd1d8fcd0` (commit `36aeb19b5cb47495df9fd1caa38ce9d2f6d12ea3`) | independent, Python |
 | `libplctag` | [libplctag](https://github.com/libplctag/libplctag) | v2.7.2 | commit `7712ed7f1ee05ba0ebfca641b3f5c43da52a66ed`, GitHub archive SHA-256 `ed1f7869fa266df1bc266b9d135cd09d53dc392e557edb9986b2e172c84eb752` | independent, C |
 | `gologix` | [gologix](https://github.com/danomagnum/gologix) | v0.44.0-beta | commit `647a0b87b756d42e37ac0f65c5762dc89036152c`, Go module sum `h1:QrkDcR4ZFmtZ2lhWpdiE+8025nTwO4BulJkPZV+wsp8=` | independent, Go |
-| `pylogix` | [pylogix](https://github.com/dmroeder/pylogix) | 1.1.6 | PyPI wheel SHA-256 `f181ff0990468c2e7fe0985be190c0bfe9c0d54dc4bb3f28f5a6d76b92cf980f` (commit `193b6c7b0c601619223ee53587abd821d3b344c1`) | independent, Python |
+| `pylogix` | [pylogix](https://github.com/dmroeder/pylogix) | 1.1.7 | PyPI wheel SHA-256 `bc35585b2a94614a880e0109704b996163f95118b3e5dbe05f0b926eced5c1cf` (commit `0b67bdec05e74d49ea319f889c2ee4726f6eef03`) | independent, Python |
 | `etherip` | [etherip](https://github.com/ornl-epics/etherip) | main, V1.0-67 | commit `ce0688ae51be5652ec200fbe389667b36a638323`, GitHub archive SHA-256 `35ad2cbb710be5bef6cae0b2441a9397534249ddb33e9ac4e1e377b2e6546c7e` | independent, Java |
 | `eiprs` | [eip-rs (rseip)](https://github.com/Joylei/eip-rs) | main, 0.3.1-2 | commit `16e2236afb65acc9c82ebdcfbdcbba72e93b3887`, GitHub archive SHA-256 `92cccb84822056e23ab93a2d200f11ebf7a3c6813648eaf081d653d2961da77b`; crates in `Cargo.lock` | independent, Rust |
 | `nodeeip` | [node-ethernet-ip](https://github.com/cmseaton42/node-ethernet-ip) | 2.0.0 | npm integrity `sha512-jGxbu8ifv2qgPzaNKbyFmLaOaefrsg3aVsBWEj3BTWyGSfaVRx/MnkNJuiR/+41GzWgt/LZpYnFGJnAnjO7DCA==` (commit `4743b077abd3cc8826d511acde8f890372826e16`) | independent, TypeScript |
 | `lokieip` | [go-ethernet-ip (loki-os)](https://github.com/loki-os/go-ethernet-ip) | master, 2022-12-29 | commit `535f79752f63a4122c37c7f0f9b95ece01a8f7b4`, GitHub archive SHA-256 `4708b8c2f72721682d6adf4719ff2bdcea070d78271d17d078f5a597f2cd5f07`, Go module sum `h1:kkL3XKGDjH1qNF78xvwJ9+lzbCwy5cCQxtkcNnbVurw=` | independent, Go |
-| `cbsigma` | [enip (cB-Sigma)](https://github.com/cB-Sigma/enip) | v0.2.0 | commit `a3cb007728bbaf830cf89b24c3a06bba8075ec3b`, GitHub archive SHA-256 `0a02ed5cb32dbe41edee94b7ea4bd523ab98d5677026f63bedcb2801245b0e33`, Go module sum `h1:Ym8XUTpJ8IaEEJF4slatHvviJjOuWqgSfZTR6ahWybQ=`; lanbcast v0.2.0 | independent, Go |
+| `cbsigma` | [enip (cB-Sigma)](https://github.com/cB-Sigma/enip) | v0.2.1 | commit `49d9fb246a82c8d3cd2d54e31a93b9b12ed642ef`, GitHub archive SHA-256 `6e974f0439fcb09f3a00063b844d9b75724804c9156e1f9cdc003ef892d00c7f`, Go module sum `h1:JOXJPLSjbh2crsM+dPthDDHLEXyYarhEjHLyUPlcK3w=`; lanbcast v0.2.0 | independent, Go |
 | `eeip` | [EEIP.NET](https://github.com/rossmann-engineering/EEIP.NET) | master, 1.6.0 | commit `58b91a0c8e30227b1b97a637635d147a2a9655dc`, GitHub archive SHA-256 `8ad4f3e498b6d02b1c65b8fae498100a9f9f90d6f691423e5c80559c4eceff5b` | independent, C# |
 
 OpENer, EIPScanner, etherip, eip-rs, EEIP.NET and go-ethernet-ip (loki-os) are pinned to a commit of
 their default branch (no recent release, or none at all). Base images, by
-digest: Debian 13 (trixie) slim and Python 3.14.8 slim-trixie (recorded
-2026-10-19); golang 1.27.3, Rust 1.98.1, Node.js 24.22.1, Maven 3.9.11 with
-Temurin 21, the Temurin 21 JRE and .NET 10 (recorded 2026-10-26).
+digest: Debian 13 (trixie) slim, Python 3.14.10 slim-trixie, golang 1.27.4,
+Rust 1.100.0, Node.js 24.22.3, Maven 3.9.16 with Temurin 21, the Temurin
+21.0.13 JRE and .NET 10 (recorded 2026-11-12).
 
 The pins live in the Dockerfiles, the Python adapters' `requirements.txt` and
 (OpENer) `adapters/opener/capabilities.json`, and are mirrored in
@@ -109,13 +109,15 @@ outcomes: pass, fail, known-difference, unsupported (n/a: a side does not
 declare it), not-tested (the fixture lacks what the case needs). A run with no
 pass fails.
 
-Run of 2026-11-06 on linux/arm64, the thirteen references at the v0.8.0 pins
-(images built from this repository, tag `dev`; the v0.7.0 images for the
-other twelve, same pins): **328 cases passed, 0 failed, 86 known
-incompatibilities, 846 n/a; every document valid against the schemas.**
-`make smoke`: every adapter, none failed. (The same run with the own image,
-`ethernetip-interop-otfabric`, as a fourteenth stack: 526 passed, 0 failed, 106
-known; its pairings are not in the tables.)
+Run of 2026-11-13 on linux/arm64, the thirteen references at the v0.8.2 pins
+(images built from this repository, tag `dev`): **369 cases passed, 0 failed,
+46 known incompatibilities, 846 n/a; every document valid against the
+schemas.** `make smoke`: every adapter, none failed. (The same references
+with the own image, `ethernetip-interop-otfabric` with go-ethernetip v0.6.0,
+as a fourteenth stack: 569 passed, 59 known, and 5 waivers of `otfabric ->
+cbsigma` no longer reproducing, now removed; 4 Class 1 cases of the own image
+against OpENer and itself failed on that loaded host and are followed up in
+the own stack. Its pairings are not in the tables.)
 
 #### Server opener
 
@@ -225,27 +227,28 @@ known; its pairings are not in the tables.)
 
 | Case | eipscanner | cpppo | pycomm3 | libplctag | gologix | pylogix | etherip | eiprs | nodeeip | eeip | lokieip | cbsigma |
 |------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| ListIdentity (TCP) | n/a | known | known | n/a | known | n/a | known | known | known | n/a | known | known |
-| ListIdentity (UDP) | known | known | known | n/a | n/a | known | known | known | known | known | n/a | known |
+| ListIdentity (TCP) | n/a | pass | pass | n/a | pass | n/a | pass | pass | pass | n/a | pass | pass |
+| ListIdentity (UDP) | pass | pass | pass | n/a | n/a | pass | pass | pass | pass | pass | n/a | pass |
 | ListServices | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 | Get_Attribute_Single | pass | pass | pass | known | pass | pass | pass | pass | pass | pass | pass | pass |
-| Get_Attributes_All (Identity) | known | known | known | known | known | known | known | known | known | known | known | known |
+| Get_Attributes_All (Identity) | pass | pass | pass | known | pass | pass | pass | pass | pass | pass | pass | pass |
 | Set_Attribute_Single (assembly data) | pass | pass | pass | known | pass | pass | n/a | pass | pass | pass | pass | pass |
 | Error status (unknown attribute) | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass | pass |
-| Multiple Service Packet | known | pass | n/a | n/a | pass | n/a | n/a | pass | pass | n/a | pass | pass |
+| Multiple Service Packet | pass | pass | n/a | n/a | pass | n/a | n/a | pass | pass | n/a | pass | pass |
 | Class 3 connected explicit messaging | n/a | n/a | pass | pass | pass | n/a | n/a | pass | pass | n/a | pass | pass |
 | identity operation | pass | n/a | pass | pass | n/a | pass | pass | n/a | pass | pass | n/a | n/a |
-| Class 1 I/O, exclusive owner | known | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | known | n/a | known |
-| Class 1 I/O, Large_Forward_Open | known | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | known | n/a | n/a |
+| Class 1 I/O, exclusive owner | pass | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | pass | n/a | known |
+| Class 1 I/O, Large_Forward_Open | pass | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | pass | n/a | n/a |
 | Class 1 I/O, input only | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 | Forward_Open refusal (connection size) | pass | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | pass | n/a | pass |
 | Class 1 I/O, configuration data | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| Logix Read Tag (atomic types) | n/a | pass | pass | pass | known | pass | known | known | pass | n/a | pass | pass |
-| Logix Read Tag Fragmented | n/a | pass | pass | pass | n/a | pass | n/a | known | n/a | n/a | n/a | pass |
-| Logix Write Tag | n/a | pass | pass | pass | known | pass | pass | known | pass | n/a | n/a | pass |
-| Logix Write Tag Fragmented (a whole array) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | known | n/a | n/a | n/a | pass |
-| Logix tag list | n/a | n/a | pass | pass | pass | pass | n/a | known | pass | n/a | pass | pass |
+| Logix Read Tag (atomic types) | n/a | pass | pass | pass | pass | pass | known | pass | pass | n/a | pass | pass |
+| Logix Read Tag Fragmented | n/a | pass | pass | pass | n/a | pass | n/a | pass | n/a | n/a | n/a | pass |
+| Logix Write Tag | n/a | pass | pass | pass | pass | pass | pass | pass | pass | n/a | n/a | pass |
+| Logix Write Tag Fragmented (a whole array) | n/a | n/a | n/a | n/a | n/a | n/a | n/a | pass | n/a | n/a | n/a | pass |
+| Logix tag list | n/a | n/a | pass | pass | pass | pass | n/a | pass | pass | n/a | pass | pass |
 | Logix tag list with structures (templates) | n/a | n/a | pass | pass | pass | known | n/a | known | pass | n/a | known | pass |
+
 What the cases check: the identity, the name (`@1/1/7`) and the start of
 Get_Attributes_All against the fixture; Set_Attribute_Single on the output
 assembly, then the input assembly (OpENer's echo) or the output assembly read
@@ -267,11 +270,11 @@ over TCP and UDP, ListServices, Get_Attribute_Single, Set_Attribute_Single,
 Get_Attributes_All and the `identity` operation (between most pairs), error
 statuses, Multiple Service Packet (EIPScanner, eip-rs, gologix,
 node-ethernet-ip, go-ethernet-ip (loki-os) and cbsigma → cpppo; all of them
-but EIPScanner → cbsigma), Class 3 (against
+→ cbsigma too), Class 3 (against
 OpENer, cpppo and cbsigma), Class 1 I/O (EIPScanner and EEIP.NET → OpENer,
 with Large_Forward_Open, input-only and configuration data; cbsigma → OpENer
-and EEIP.NET → cbsigma exchange data too, but their cases are known
-differences for want of a Forward_Close, cB-Sigma/enip#3), Logix tag services
+and EEIP.NET and EIPScanner → cbsigma; cbsigma → OpENer exchanges data too,
+but its case is a known difference for want of a Forward_Close), Logix tag services
 (against cpppo, ab_server, gologix and cbsigma, Read Tag Fragmented included;
 Write Tag Fragmented of a whole array: rseip → cpppo and ab_server, cbsigma →
 cpppo), and the tag list with templates (pycomm3, libplctag, gologix and
@@ -305,8 +308,10 @@ and types.
 
 Found with the `cbsigma` adapter (v0.8.0), each in a cross-stack run and a
 capture of the target, reproduced with enip's own client and server, and
-reported upstream. The pairings they fail are listed in
-`tests/known-differences.tsv` with both links.
+reported upstream. All eight are fixed in enip v0.2.1 (pinned since v0.8.2);
+their entries are gone from `tests/known-differences.tsv`. The scanner still
+sends no Forward_Close when it closes an I/O connection (documented upstream
+as not yet done): the `cbsigma ->` I/O cases stay known differences.
 
 | Upstream issue | Tracking | What |
 |---|---|---|

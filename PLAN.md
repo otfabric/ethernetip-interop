@@ -31,10 +31,6 @@ Status as of 2026-11-06 (v0.8.1).
 
 ## Next
 
-- When cB-Sigma's enip fixes its reported issues
-  ([cB-Sigma/enip#1–#8](https://github.com/cB-Sigma/enip/issues)), move the pin
-  (the Upstream workflow builds it as a candidate) and remove the entries
-  that stop reproducing.
 - Self-test coverage still without a peer: Read-Modify-Write and structure or
   STRING writes (no reference server has them), Get_Attribute_List,
   ListInterfaces and the TCP/IP and Ethernet Link objects (no reference client

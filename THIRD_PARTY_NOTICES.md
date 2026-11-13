@@ -47,7 +47,7 @@ The cpppo adapter is a derivative work of the GPL-3.0 cpppo and carries
 | Component | Version | Licence | Source |
 |-----------|---------|---------|--------|
 | go-ethernetip | latest release when built | MIT | https://github.com/otfabric/go-ethernetip |
-| Go standard library | 1.27.3 | BSD-3-Clause | https://go.dev |
+| Go standard library | 1.27.4 | BSD-3-Clause | https://go.dev |
 | Adapter | this repository, `own/go-ethernetip/` | MIT | https://github.com/otfabric/ethernetip-interop |
 | Base system | Debian trixie-slim | various; see `/usr/share/doc/*/copyright` in the image | https://www.debian.org |
 
@@ -86,7 +86,7 @@ Licence in the image: `/licenses/eipscanner/LICENSE`.
 | Component | Version | Licence | Source |
 |-----------|---------|---------|--------|
 | pycomm3 ((c) 2020 Ian Ottoway, (c) 2014 Agostino Ruscito) | 1.2.16 (PyPI wheel SHA-256 `88e95c70472154ee32233f76af126526db208830e1e803eb9f621c8bd1d8fcd0`; tag commit `36aeb19b5cb47495df9fd1caa38ce9d2f6d12ea3`) | MIT | https://github.com/ottowayi/pycomm3 |
-| Python | 3.14.8 (official `python:3.14.8-slim-trixie` image) | PSF-2.0 | https://www.python.org |
+| Python | 3.14.10 (official `python:3.14.10-slim-trixie` image) | PSF-2.0 | https://www.python.org |
 | Adapter | this repository, `adapters/pycomm3/` | MIT | https://github.com/otfabric/ethernetip-interop |
 | Base system | Debian trixie-slim | various; see `/usr/share/doc/*/copyright` in the image | https://www.debian.org |
 
@@ -102,7 +102,7 @@ imports it.
 |-----------|---------|---------|--------|
 | cpppo ((c) 2013 Hard Consulting Corporation; Dominion Research & Development Corp.) | 5.2.5 (PyPI wheel SHA-256 `0257ba393f1e2bdd06ea712cead740e496c802b3e5275c1995ee2df31f29ed1c`; tag commit `f7c224bbb2389bd26d0088eeb1a93db3a5c4858f`) | GPL-3.0 (cpppo is dual-licensed: GPL-3.0 or a negotiated proprietary licence; used here under the GPL) | https://github.com/pjkundert/cpppo |
 | greenery (Sam Hughes, "qntm") | 2.1 (PyPI sdist SHA-256 `759c3bf40b6fe6ef0a6b373230d07470e0e315f32bcdbaf381901b0d8a6f91d1`) | MIT | https://github.com/qntm/greenery |
-| Python | 3.14.8 (official `python:3.14.8-slim-trixie` image) | PSF-2.0 | https://www.python.org |
+| Python | 3.14.10 (official `python:3.14.10-slim-trixie` image) | PSF-2.0 | https://www.python.org |
 | Adapter | this repository, `adapters/cpppo/` | GPL-3.0-or-later | https://github.com/otfabric/ethernetip-interop |
 | Base system | Debian trixie-slim | various; see `/usr/share/doc/*/copyright` in the image | https://www.debian.org |
 
@@ -148,7 +148,7 @@ Licences in the image: `/licenses/gologix/LICENSE`, `/licenses/crc16/LICENSE`.
 | Component | Version | Licence | Source |
 |-----------|---------|---------|--------|
 | pylogix ((c) Dustin Roeder) | 1.1.6 (PyPI wheel SHA-256 `f181ff0990468c2e7fe0985be190c0bfe9c0d54dc4bb3f28f5a6d76b92cf980f`; tag commit `193b6c7b0c601619223ee53587abd821d3b344c1`), unmodified | Apache-2.0 | https://github.com/dmroeder/pylogix |
-| Python | 3.14.8 (official `python:3.14.8-slim-trixie` image) | PSF-2.0 | https://www.python.org |
+| Python | 3.14.10 (official `python:3.14.10-slim-trixie` image) | PSF-2.0 | https://www.python.org |
 | Adapter | this repository, `adapters/pylogix/` | MIT | https://github.com/otfabric/ethernetip-interop |
 | Base system | Debian trixie-slim | various; see `/usr/share/doc/*/copyright` in the image | https://www.debian.org |
 
@@ -159,7 +159,7 @@ Licence in the image: `/licenses/pylogix/LICENSE`.
 | Component | Version | Licence | Source |
 |-----------|---------|---------|--------|
 | etherip ((c) 2012 UT-Battelle, LLC and contributors) | main `ce0688ae51be5652ec200fbe389667b36a638323` (V1.0 + 67 commits), GitHub archive SHA-256 `35ad2cbb710be5bef6cae0b2441a9397534249ddb33e9ac4e1e377b2e6546c7e`, jar built unmodified | EPL-1.0 | https://github.com/ornl-epics/etherip |
-| Eclipse Temurin JRE | 21.0.8+9 (official `eclipse-temurin:21.0.8_9-jre-noble` image) | GPL-2.0 with the Classpath Exception | https://adoptium.net |
+| Eclipse Temurin JRE | 21.0.13+9 (official `eclipse-temurin:21.0.13_9-jre-noble` image) | GPL-2.0 with the Classpath Exception | https://adoptium.net |
 | Adapter | this repository, `adapters/etherip/` | MIT | https://github.com/otfabric/ethernetip-interop |
 | Base system | Ubuntu 24.04 (noble) | various; see `/usr/share/doc/*/copyright` in the image | https://ubuntu.com |
 
@@ -183,7 +183,7 @@ files under `/licenses/crates/<crate>-<version>/`.
 | Component | Version | Licence | Source |
 |-----------|---------|---------|--------|
 | node-ethernet-ip (npm `ethernet-ip`, (c) 2018-2026 Canaan Seaton) | 2.0.0 (npm integrity `sha512-jGxbu8ifv2qgPzaNKbyFmLaOaefrsg3aVsBWEj3BTWyGSfaVRx/MnkNJuiR/+41GzWgt/LZpYnFGJnAnjO7DCA==`; tag commit `4743b077abd3cc8826d511acde8f890372826e16`); no runtime dependencies | MIT | https://github.com/cmseaton42/node-ethernet-ip |
-| Node.js | 24.22.1 (official `node:24.22.1-trixie-slim` image) | MIT and the licences of its components | https://nodejs.org |
+| Node.js | 24.22.3 (official `node:24.22.3-trixie-slim` image) | MIT and the licences of its components | https://nodejs.org |
 | Adapter | this repository, `adapters/nodeeip/` | MIT | https://github.com/otfabric/ethernetip-interop |
 | Base system | Debian trixie-slim | various; see `/usr/share/doc/*/copyright` in the image | https://www.debian.org |
 
