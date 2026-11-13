@@ -268,9 +268,9 @@ int run(const Args &a) {
 				cp.push_back(static_cast<uint8_t>(v));
 			}
 		};
-		// The configuration instance always, 0 for none, as EEIP.NET,
-		// cB-Sigma's enip and go-ethernetip send it: cB-Sigma's target
-		// refuses a path of the two connection points alone (0x0315).
+		// The configuration instance always, 0 for none, as EEIP.NET and
+		// cB-Sigma's enip send it: cB-Sigma's target refuses
+		// a path of the two connection points alone (0x0315).
 		push(0x24, a.num("config", 0));
 		push(0x2C, a.num("output", 0));
 		push(0x2C, a.num("input", 0));
