@@ -113,7 +113,7 @@ Run of 2026-11-13 on linux/arm64, the thirteen references at the v0.8.2 pins
 (images built from this repository, tag `dev`): **369 cases passed, 0 failed,
 46 known incompatibilities, 846 n/a; every document valid against the
 schemas.** `make smoke`: every adapter, none failed. (The same references
-with the own image, `ethernetip-interop-otfabric` with go-ethernetip v0.6.0,
+with the own image, `ethernetip-interop-otfabric` with go-ethernetip v0.8.0,
 as a fourteenth stack: 569 passed, 59 known, and 5 waivers of `otfabric ->
 cbsigma` no longer reproducing, now removed; 4 Class 1 cases of the own image
 against OpENer and itself failed on that loaded host and are followed up in
