@@ -32,7 +32,8 @@ protocol-testing framework.
 
 ## R2 - Reference implementations
 
-- R2.1 In scope:
+- R2.1 In scope: exactly these thirteen, each pinned in `versions.yaml`
+  (`implementations`):
 
   | Priority | Implementation | Language | Licence | Roles |
   |----------|----------------|----------|---------|-------|
@@ -40,6 +41,15 @@ protocol-testing framework.
   | P0 | EIPScanner | C++ | MIT | originator |
   | P1 | cpppo | Python | GPL-3.0 | target (Logix-style), originator |
   | P1 | pycomm3 | Python | MIT | originator (CIP, Logix) |
+  | P1 | libplctag | C | MPL-2.0 OR LGPL-2.0-or-later | target (ab_server, Logix tags), originator |
+  | P1 | gologix | Go | MIT | target, originator |
+  | P1 | pylogix | Python | Apache-2.0 | originator (Logix) |
+  | P1 | etherip | Java | EPL-1.0 | originator |
+  | P1 | EEIP.NET | C# | MIT | originator |
+  | P1 | cB-Sigma enip | Go | Apache-2.0 | target, originator |
+  | P2 | rseip (eip-rs) | Rust | MIT | originator |
+  | P2 | node-ethernet-ip | TypeScript | MIT | originator (Logix) |
+  | P2 | go-ethernet-ip (loki-os) | Go | WTFPL | originator |
 
 - R2.2 Each is its own image. No image contains two implementations.
 - R2.3 An adapter is released only when it builds from pinned sources and

@@ -1,10 +1,11 @@
 # Machine-readable version manifest for ethernetip-interop.
 # Upstream pins and base image digests are release inputs; nothing floats.
-# The Dockerfiles, adapters/opener/capabilities.json and the
-# requirements.txt of the Python adapters are the source of truth for a
-# build: scripts/check-versions.sh fails when this file disagrees with them.
+# The Dockerfiles, adapters/opener/capabilities.json, the requirements.txt of
+# the Python adapters, the go.mod and go.sum of the Go adapters and the tool
+# images of the Makefile are the source of truth for a build:
+# scripts/check-versions.sh fails when this file disagrees with them.
 
-interop_version: "0.8.2"
+interop_version: "0.9.0"
 contract_version: "1.0"        # docs/CONTAINER_CONTRACT.md; documents carry schemaVersion "1.0", the compatible line
 fixture_schema: "1.0"          # fixtures/schema/ethernetip-fixture.schema.json
 
@@ -300,6 +301,18 @@ base_images:
   node_24_22_3_trixie_slim: "docker.io/library/node:24.22.3-trixie-slim@sha256:af02d57b57719b9657a45199a79264a9437940cd55b3c7b3fc99615654f124a0"
   dotnet_sdk_10_0: "mcr.microsoft.com/dotnet/sdk:10.0@sha256:fe0fd4e93bd2fbb47c883b7a6369e5c8d3db8bf01cdc5981f6ee35fbdf3ff4fb"
   dotnet_runtime_10_0: "mcr.microsoft.com/dotnet/runtime:10.0@sha256:80a51954ac70925e5783cb1ed35129a4243dcb1cddef20066b67346e17db284d"
+
+# The tooling of the Makefile, scripts/lib.sh and the workflows, pinned by
+# version and digest (multi-arch indexes; the Makefile pulls the images
+# through TOOLS_REGISTRY). scripts/check-versions.sh fails when the Makefile
+# or scripts/lib.sh names another, or a tool image without a digest. The
+# Python packages are in scripts/requirements.txt, with their hashes.
+tooling:
+  shellcheck: "koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d"
+  python: "library/python:3.12.16-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b"
+  binfmt: "tonistiigi/binfmt:qemu-v10.2.3@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0"
+  buildkit: "moby/buildkit:v0.34.2@sha256:c5f8862f52499773af85bc07695b2379ef08e8002352b0df2c4864c91d78dabe"
+  govulncheck: "golang.org/x/vuln/cmd/govulncheck@v1.9.0"   # run with the golang image of the Go adapters (base_images)
 
 images:
   opener: "ghcr.io/otfabric/ethernetip-interop-opener"

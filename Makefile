@@ -39,11 +39,22 @@ PUBLISHED_ADAPTERS ?= opener eipscanner cpppo pycomm3 libplctag gologix pylogix 
 
 image = $(REGISTRY)/ethernetip-interop-$(1)
 
-export REGISTRY VERSION TOOLS_REGISTRY
+# The tools the Makefile and scripts/lib.sh run, pinned by version and digest
+# (multi-arch indexes) and pulled through TOOLS_REGISTRY; versions.yaml
+# (tooling) mirrors them and scripts/check-versions.sh checks both. The
+# Python packages of the validators are pinned with their hashes in
+# scripts/requirements.txt.
+SHELLCHECK_IMAGE ?= $(TOOLS_REGISTRY)/koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d
+PYTHON_IMAGE     ?= $(TOOLS_REGISTRY)/library/python:3.12.16-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b
+BINFMT_IMAGE     ?= $(TOOLS_REGISTRY)/tonistiigi/binfmt:qemu-v10.2.3@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0
+BUILDKIT_IMAGE   ?= $(TOOLS_REGISTRY)/moby/buildkit:v0.34.2@sha256:c5f8862f52499773af85bc07695b2379ef08e8002352b0df2c4864c91d78dabe
+PIP_INSTALL      := pip install -q --root-user-action=ignore --disable-pip-version-check --require-hashes --only-binary=:all: -r
+
+export REGISTRY VERSION TOOLS_REGISTRY PYTHON_IMAGE
 
 # image-% and smoke-% are pattern rules, which make ignores for .PHONY
 # targets: they depend on FORCE instead.
-.PHONY: help all ci validate documents lint images smoke interop capabilities print-adapters print-published-adapters run-opener run-cpppo buildx-setup buildx publish publish-arch publish-manifest digests clean FORCE
+.PHONY: help all ci validate documents lint test-go vulncheck images smoke interop capabilities print-adapters print-published-adapters run-opener run-cpppo buildx-setup buildx publish publish-arch publish-manifest digests clean FORCE
 FORCE:
 
 help: ## Show this help
@@ -51,7 +62,7 @@ help: ## Show this help
 
 all: validate images ## Validate fixtures and build the local images
 
-ci: validate lint images smoke interop ## Full local CI: validate, lint, build, smoke and cross-stack self-test
+ci: validate lint test-go vulncheck images smoke interop ## Full local CI: validate, lint, Go tests and govulncheck, build, smoke and cross-stack self-test
 	@echo ""
 	@echo "All local CI checks passed."
 
@@ -66,8 +77,8 @@ validate: ## Check versions.yaml against the build files and RELEASE.md; validat
 		python3 scripts/validate-fixtures.py --require-schema; \
 	else \
 		echo "(jsonschema not installed locally: running the validator in a container)"; \
-		$(RETRY) docker run --rm -v "$(CURDIR):/work:ro" -w /work $(TOOLS_REGISTRY)/library/python:3.12-slim \
-			sh -c 'pip install -q --root-user-action=ignore --disable-pip-version-check jsonschema && python scripts/validate-fixtures.py --require-schema'; \
+		$(RETRY) docker run --rm -v "$(CURDIR):/work:ro" -w /work $(PYTHON_IMAGE) \
+			sh -c '$(PIP_INSTALL) scripts/requirements.txt && python scripts/validate-fixtures.py --require-schema'; \
 	fi
 
 lint: ## Shellcheck the scripts and the OpENer entrypoint (the installed shellcheck, or a container when there is none)
@@ -75,9 +86,34 @@ lint: ## Shellcheck the scripts and the OpENer entrypoint (the installed shellch
 	@if command -v shellcheck >/dev/null 2>&1; then \
 		shellcheck --severity=warning -x -P scripts scripts/*.sh adapters/opener/*.sh; \
 	else \
-		$(RETRY) docker run --rm -v "$(CURDIR):/mnt:ro" -w /mnt $(TOOLS_REGISTRY)/koalaman/shellcheck:stable \
+		$(RETRY) docker run --rm -v "$(CURDIR):/mnt:ro" -w /mnt $(SHELLCHECK_IMAGE) \
 			--severity=warning -x -P scripts scripts/*.sh adapters/opener/*.sh; \
 	fi
+
+# ── Go adapters: vet, race tests, govulncheck ────────────────────────────────
+# In the golang image the adapters are built with (the digest of their
+# Dockerfiles; scripts/check-versions.sh checks it), so the tests and
+# govulncheck see the Go of the images. The module cache is a Docker volume.
+# The image of OT Fabric's own stack has the same targets in its own Makefile
+# under own/ (REQUIREMENTS.md R1).
+
+GO_IMAGE ?= $(BASE_REGISTRY)/golang:1.27.4-trixie@sha256:b54b2639de8c1bfe538ec5ffc45f29b1932235ac5f6d63c059853646677112d9
+GOVULNCHECK_VERSION ?= v1.9.0
+GO_MODULES := adapters/gologix adapters/lokieip adapters/cbsigma
+go_run = $(RETRY) docker run --rm -v "$(CURDIR):/src" -v ethernetip-interop-gomod:/go/pkg/mod -w /src/$(1) \
+	-e GOFLAGS=-mod=readonly -e GOTOOLCHAIN=local $(GO_IMAGE) sh -c '$(2)'
+
+test-go: ## gofmt, vet and race tests of the Go adapters, in the golang image of their Dockerfiles
+	@for m in $(GO_MODULES); do \
+		echo "Testing $$m..."; \
+		$(call go_run,$$m,test -z "$$(gofmt -l .)" && go vet ./... && go test -race -count=1 ./...) || exit 1; \
+	done
+
+vulncheck: ## govulncheck the Go adapters, with the Go of the images
+	@for m in $(GO_MODULES); do \
+		echo "govulncheck $$m..."; \
+		$(call go_run,$$m,go run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...) || exit 1; \
+	done
 
 # ── Local single-arch images (loaded into Docker; used by smoke and interop) ──
 
@@ -108,8 +144,8 @@ documents: ## Run the self-tests keeping every document, and validate them again
 	@if python3 -c 'import jsonschema' 2>/dev/null; then \
 		python3 scripts/validate-documents.py reports; \
 	else \
-		$(RETRY) docker run --rm -v "$(CURDIR):/work:ro" -w /work $(TOOLS_REGISTRY)/library/python:3.12-slim \
-			sh -c 'pip install -q --root-user-action=ignore --disable-pip-version-check jsonschema && python scripts/validate-documents.py reports'; \
+		$(RETRY) docker run --rm -v "$(CURDIR):/work:ro" -w /work $(PYTHON_IMAGE) \
+			sh -c '$(PIP_INSTALL) scripts/requirements.txt && python scripts/validate-documents.py reports'; \
 	fi
 
 # ── Candidates ────────────────────────────────────────────────────────────────
@@ -168,10 +204,10 @@ run-cpppo: ## Run the cpppo simulator (logix fixture) with 44818/tcp on 127.0.0.
 
 buildx-setup: ## Prepare multi-arch builds: QEMU handlers and a docker-container builder (pulled through TOOLS_REGISTRY)
 	@echo "Installing QEMU handlers and creating builder $(BUILDER)..."
-	@$(RETRY) docker run --privileged --rm $(TOOLS_REGISTRY)/tonistiigi/binfmt:latest --install arm64,amd64 >/dev/null
+	@$(RETRY) docker run --privileged --rm $(BINFMT_IMAGE) --install arm64,amd64 >/dev/null
 	@docker buildx rm $(BUILDER) >/dev/null 2>&1 || true
 	@$(RETRY) docker buildx create --name $(BUILDER) --driver docker-container \
-		--driver-opt image=$(TOOLS_REGISTRY)/moby/buildkit:buildx-stable-1 --bootstrap >/dev/null
+		--driver-opt image=$(BUILDKIT_IMAGE) --bootstrap >/dev/null
 	@docker buildx inspect $(BUILDER) | grep -E '^(Name|Driver|Platforms)' || true
 
 # Uses the builder of buildx-setup when there is one, the current builder otherwise.

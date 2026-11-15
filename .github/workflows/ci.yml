@@ -34,7 +34,7 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - run: pip install jsonschema
+      - run: "pip install --require-hashes --only-binary=:all: -r scripts/requirements.txt"
       - name: Unit tests of the result scripts
         run: python3 -m unittest discover -q -s scripts -p 'test_*.py'
       - name: versions.yaml matches the build files
@@ -61,6 +61,25 @@ jobs:
             echo "::error::consumer-specific reference found"; exit 1
           fi
 
+  # The Go modules (the gologix, lokieip and cbsigma adapters, and the image
+  # of OT Fabric's own stack through its own Makefile, REQUIREMENTS.md R1) in
+  # the golang image the adapters are built with: gofmt, vet, race tests and
+  # govulncheck with the Go of the images.
+  go:
+    name: Go tests, govulncheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: gofmt, vet and race tests
+        run: |
+          make test-go
+          for m in own/*/Makefile; do make -f "${m}" test; done
+      - name: govulncheck
+        run: |
+          make vulncheck
+          for m in own/*/Makefile; do make -f "${m}" vulncheck; done
+
   # Built and self-tested natively on both architectures: no emulation.
   interop:
     name: Build, smoke, cross-stack (${{ matrix.arch }})
@@ -80,7 +99,7 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - run: pip install jsonschema
+      - run: "pip install --require-hashes --only-binary=:all: -r scripts/requirements.txt"
 
       - name: Build images
         run: make -j4 --output-sync=target images

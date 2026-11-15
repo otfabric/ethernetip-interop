@@ -227,7 +227,9 @@ ethernetip-interop/
 
 ```sh
 make help        # all targets
-make ci          # validate, lint, build, smoke, cross-stack self-test
+make ci          # validate, lint, Go tests and govulncheck, build, smoke, cross-stack self-test
+make test-go     # gofmt, vet and race tests of the Go adapters (in the golang image of their Dockerfiles)
+make vulncheck   # govulncheck of the Go adapters
 make validate    # versions.yaml against the build files; fixtures against the schema and the cross-field rules
 make lint        # shellcheck
 make buildx      # check the other architecture locally, under emulation (CI builds both natively)

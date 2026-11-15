@@ -14,8 +14,9 @@
 # result document is kept under REPORT_DIR/interop/<client>-<server>/, the
 # outcome of every case in summary.tsv, the matrix in summary.md and the run in
 # results.json (interop-result-v1: a run with no pass, or with a known
-# incompatibility that no longer reproduces, fails). The documents are then
-# checked against schemas/.
+# incompatibility that no longer reproduces, fails). The documents are checked
+# against schemas/ before results.json is written, as the scenario
+# harness.documents, and results.json after.
 #
 # These results are about the stacks of the images it runs: the references,
 # and an image named by ADAPTER_IMAGE_<adapter> (scripts/lib.sh), never a
@@ -445,8 +446,7 @@ for id in "${!WAIVERS[@]}"; do
     fi
 done
 
-results_close || FAIL=$((FAIL + 1))
-if validate_documents "${OUT}" >"${OUT}/schema-check.txt" 2>&1; then ok "documents match schemas/"
-else fail "documents do not match schemas/: $(cat "${OUT}/schema-check.txt")"; fi
+# ---- the documents against schemas/, as a scenario of results.json ----
+check_documents_and_close "${OUT}"
 
 finish

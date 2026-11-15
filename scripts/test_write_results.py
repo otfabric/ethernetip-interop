@@ -122,5 +122,36 @@ class Records(unittest.TestCase):
         self.assertNotEqual(code, 0)
 
 
+class Documents(unittest.TestCase):
+    """check_documents_and_close of scripts/lib.sh, the end of scripts/interop.sh,
+    with the schema check (validate_documents) replaced by a stub."""
+
+    def run_lib(self, validate):
+        with tempfile.TemporaryDirectory() as d:
+            script = ('set -u; source "%s/lib.sh"; validate_documents() { %s; }; D=%s; '
+                      'results_open t $D "make t"; at a.b x y; ok "a check"; check_documents_and_close $D; finish'
+                      % (HERE, validate, d))
+            p = subprocess.run(["bash", "-c", script], capture_output=True, text=True)
+            with open(os.path.join(d, "results.json")) as f:
+                doc = json.load(f)
+            return p.returncode, [r for r in doc["results"] if r["id"] == "harness.documents"]
+
+    def test_documents_that_do_not_match_the_schemas_are_a_failure_in_results_json(self):
+        code, got = self.run_lib('echo "FAIL x.json (result)"; return 1')
+        self.assertNotEqual(code, 0)
+        self.assertEqual([r["outcome"] for r in got], ["fail"])
+        self.assertIn("FAIL x.json", got[0]["reason"])
+
+    def test_documents_that_match_the_schemas_are_a_pass_in_results_json(self):
+        code, got = self.run_lib('echo "1 documents checked, 0 invalid"')
+        self.assertEqual(code, 0)
+        self.assertEqual([r["outcome"] for r in got], ["pass"])
+
+    def test_a_results_json_that_does_not_match_its_schema_fails_the_run(self):
+        code, got = self.run_lib('[[ -f "$1/results.json" ]] && { echo "FAIL results.json"; return 1; }; return 0')
+        self.assertNotEqual(code, 0)
+        self.assertEqual([r["outcome"] for r in got], ["pass"])
+
+
 if __name__ == "__main__":
     unittest.main()

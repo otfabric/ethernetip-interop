@@ -2,8 +2,10 @@
 # SPDX-License-Identifier: MIT
 #
 # Fails when versions.yaml disagrees with what the builds actually pin: the
-# Dockerfiles, the static capability documents (adapters/*/capabilities.json)
-# and the requirements.txt of the Python adapters.
+# Dockerfiles (of the adapters and of OT Fabric's own image under own/), the
+# static capability documents (adapters/*/capabilities.json), the
+# requirements.txt of the Python adapters, the go.mod and go.sum of the Go
+# adapters, and the tool images of the Makefiles and scripts/lib.sh.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT}"
@@ -76,5 +78,61 @@ for a in "${adapters[@]}"; do
 done
 need "greenery version" "greenery: \"$(req_version adapters/cpppo/requirements.txt greenery) sdist"
 need "greenery hash"    "sha256 $(req_hash adapters/cpppo/requirements.txt greenery)"
+
+# Go adapters: go.mod requires the version the Dockerfile builds (as a Go
+# pseudo-version for an untagged revision), and go.sum's hash of that version
+# is the module_sum of versions.yaml.
+impl() {  # impl <name> <field>: the field of implementations.<name> in versions.yaml
+    awk -v n="$1" -v f="$2" '
+        /^[a-z_]+:/ { sect = $1 }
+        sect == "implementations:" && /^  [a-z0-9_]+:/ { cur = $1; sub(/:$/, "", cur) }
+        sect == "implementations:" && cur == n && $1 == f ":" { v = $2; gsub(/"/, "", v); print v; exit }
+    ' versions.yaml
+}
+go_version() {  # go_version <UPSTREAM_VERSION> <UPSTREAM_SHA>: the version as go.mod writes it
+    if [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+-[0-9]{14}-[0-9a-f]+$ ]]; then echo "v${1%-*}-${2:0:12}"; else echo "v$1"; fi
+}
+for a in "${adapters[@]}"; do
+    gm="adapters/${a}/go.mod"
+    [[ -f "${gm}" ]] || continue
+    mod="$(impl "${a}" module)"
+    have="$(awk -v m="${mod}" '($1 == "require" && $2 == m) { print $3; exit } ($1 == m) { print $2; exit }' "${gm}")"
+    same "${a} in Dockerfile and go.mod" \
+        "$(go_version "$(arg "adapters/${a}/Dockerfile" UPSTREAM_VERSION)" "$(arg "adapters/${a}/Dockerfile" UPSTREAM_SHA)")" "${have}"
+    same "${a} module sum in go.sum and versions.yaml" \
+        "$(awk -v m="${mod}" -v v="${have}" '$1 == m && $2 == v { print $3; exit }' "adapters/${a}/go.sum")" "$(impl "${a}" module_sum)"
+done
+
+# OT Fabric's own image is built from the same base images (base_images).
+for f in own/*/Dockerfile; do
+    [[ -f "${f}" ]] || continue
+    while read -r d; do
+        need "${f} base image digest" "${d}"
+    done < <(sed -nE 's/^ARG [A-Z_]+_DIGEST=(sha256:[0-9a-f]+)$/\1/p' "${f}" | sort -u)
+done
+
+# Tooling: every *_IMAGE of the Makefiles is pinned by digest, and versions.yaml
+# records it: a TOOLS_REGISTRY image under tooling, the golang image the Go
+# modules are tested in under base_images. The default PYTHON_IMAGE of
+# scripts/lib.sh and the govulncheck version of the Makefiles likewise.
+tools='$(TOOLS_REGISTRY)/' base='$(BASE_REGISTRY)/'
+for m in Makefile own/*/Makefile; do
+    [[ -f "${m}" ]] || continue
+    while read -r var ref; do
+        case "${ref}" in
+            "${tools}"*@sha256:*) need "${m} ${var}" "\"${ref#"${tools}"}\"" ;;
+            "${base}"*@sha256:*)  need "${m} ${var}" "/${ref#"${base}"}\"" ;;
+            *) echo "FAIL ${m} ${var}: '${ref}' is not pinned by digest"; status=1 ;;
+        esac
+    done < <(sed -nE 's/^([A-Z0-9_]+_IMAGE)[[:space:]]*\?=[[:space:]]*(.*)$/\1 \2/p' "${m}")
+    v="$(sed -nE 's/^GOVULNCHECK_VERSION[[:space:]]*\?=[[:space:]]*([^[:space:]]+).*$/\1/p' "${m}" | head -1)"
+    if [[ -n "${v}" ]]; then need "${m} govulncheck" "govulncheck@${v}\""
+    else echo "FAIL ${m}: no GOVULNCHECK_VERSION"; status=1; fi
+done
+v="$(sed -nE 's/^PYTHON_IMAGE="\$\{PYTHON_IMAGE:-\$\{TOOLS_REGISTRY\}\/([^}]+)\}"$/\1/p' scripts/lib.sh)"
+case "${v}" in
+    *@sha256:*) need "scripts/lib.sh PYTHON_IMAGE" "\"${v}\"" ;;
+    *) echo "FAIL scripts/lib.sh PYTHON_IMAGE: '${v}' is not pinned by digest"; status=1 ;;
+esac
 
 exit "${status}"
