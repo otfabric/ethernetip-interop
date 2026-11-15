@@ -69,7 +69,7 @@ jobs:
         with:
           python-version: "3.12"
       - if: steps.resolve.outputs.update == 'yes'
-        run: pip install jsonschema
+        run: "pip install --require-hashes --only-binary=:all: -r scripts/requirements.txt"
 
       # A commit pin is keyed by its commit; the self-test summary
       # (reports/candidate/interop/summary.md) goes into the log.

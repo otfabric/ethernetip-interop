@@ -77,6 +77,14 @@ make -f own/go-ethernetip/Makefile image smoke interop    # from the repository 
 
 `VERSION=dev` tests against the reference images `make images` built locally.
 
+The module's own checks, gofmt, `go vet`, the race tests and govulncheck, run
+in CI on every pull request that is not documentation only, in the golang
+image of the Dockerfile and with `go.mod` as committed:
+
+```sh
+make -f own/go-ethernetip/Makefile test vulncheck          # from the repository root
+```
+
 ## How it behaves
 
 - The Logix operations (`read-tag`, `read-tags`, `write-tag`, `tag-list`) go

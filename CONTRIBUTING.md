@@ -16,7 +16,7 @@ schema validation and shellcheck run in containers when they are not
 installed.
 
 ```sh
-make ci     # validate, lint, build, smoke, cross-stack self-test
+make ci     # validate, lint, Go tests and govulncheck, build, smoke, cross-stack self-test
 ```
 
 Run `make` for all targets.
@@ -32,7 +32,7 @@ Keep the `SPDX-License-Identifier` header of each adapter source: `MIT`, except 
 
 ## Moving an upstream pin
 
-1. Change the pin in the Dockerfile (`UPSTREAM_VERSION`, `UPSTREAM_SHA`, and `UPSTREAM_SHA256` of a GitHub archive) or in `requirements.txt` (version and `--hash`), and in `versions.yaml`; for OpENer also in `adapters/opener/capabilities.json`. `scripts/check-versions.sh` must pass.
+1. Change the pin in the Dockerfile (`UPSTREAM_VERSION`, `UPSTREAM_SHA`, and `UPSTREAM_SHA256` of a GitHub archive), in `requirements.txt` (version and `--hash`) or, for a Go adapter, in `go.mod` and `go.sum` (`go get <module>@<version>`; an untagged commit is the Go pseudo-version of `UPSTREAM_SHA`), and in `versions.yaml` (with `module_sum`, the `h1:` hash of `go.sum`); for OpENer also in `adapters/opener/capabilities.json`. `scripts/check-versions.sh` must pass.
 2. `make ci`.
 3. Record the new version, and anything it changed, in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [RELEASE.md](RELEASE.md).
 
@@ -42,7 +42,7 @@ SHA-256. cpppo and pycomm3 are pinned to their PyPI releases by hash.
 
 ## Registries and retries
 
-CI does not pull from Docker Hub: its anonymous rate limit and its token service fail too often on shared runners. The workflows set `BASE_REGISTRY=mirror.gcr.io/library` (base images, which the Dockerfiles pin by digest, so the mirror cannot change what is built) and `TOOLS_REGISTRY=mirror.gcr.io` (BuildKit, QEMU handlers, shellcheck, Python). Locally both default to Docker Hub.
+CI does not pull from Docker Hub: its anonymous rate limit and its token service fail too often on shared runners. The workflows set `BASE_REGISTRY=mirror.gcr.io/library` (base images, which the Dockerfiles pin by digest, so the mirror cannot change what is built) and `TOOLS_REGISTRY=mirror.gcr.io` (BuildKit, QEMU handlers, shellcheck, Python, pinned by version and digest in the Makefile and `versions.yaml` `tooling`; `scripts/check-versions.sh` checks that they agree). Locally both default to Docker Hub.
 
 Every command that talks to a registry runs through `scripts/retry.sh`, which repeats it with a growing delay when the output shows a rate limit, a 5xx or a timeout, and returns any other failure at once.
 
@@ -92,6 +92,6 @@ sources.
 | Push to a branch | none | nothing; dispatch `ci.yml` to test a branch without a pull request |
 | Push to `main` | `policy.yml` | the light checks; the merged commit was tested as the pull request's merge commit |
 | Schedule | `ci.yml`, `upstream.yml` | the scheduled runs, on `main` |
-| Release | `release.yml` | the release workflow tests the release commit again |
+| Release | `release.yml` | on a `vX.Y.Z` tag, or a manual run that bumps the latest tag: on an amd64 and an arm64 runner, `scripts/check-versions.sh`, `validate-fixtures.py --require-schema`, the `interop_version` and RELEASE.md notes checks, the image builds, `make smoke` and `make interop`, then the push of those images; a last job joins them into the multi-arch tags, checks every digest and creates the GitHub release. The unit tests, shellcheck and the Go job of `ci.yml` do not run again |
 
 Documentation means an added or modified `*.md` file outside `.github/`, `testdata/` and `vendor/`, other than `AGENTS.md` and `CLAUDE.md`. A deleted or renamed document, or any other file, runs everything. `OT Fabric Required Checks` fails unless every job that applies succeeded; its summary lists them.

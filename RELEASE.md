@@ -27,6 +27,29 @@ manual workflow and no releases (`own/go-ethernetip/README.md`).
 
 ---
 
+## v0.9.0
+
+**Date:** 2026-11-15
+**Previous release:** v0.8.2
+
+### Changed
+
+- CI has a Go job: gofmt, `go vet`, the race tests and govulncheck v1.9.0 of the gologix, lokieip and cbsigma adapters (`make test-go`, `make vulncheck`) and of the own image's adapter (`make -f own/go-ethernetip/Makefile test vulncheck`), in the golang image the adapters are built with.
+- The tooling is pinned by version and digest: shellcheck v0.11.0, Python 3.12.16-slim, binfmt qemu-v10.2.3 and BuildKit v0.34.2 in the Makefile and `scripts/lib.sh`, recorded in `versions.yaml` `tooling`. The fixture and document validators install jsonschema 4.26.0 and its dependencies from `scripts/requirements.txt` with `--require-hashes`, in the workflows and in the Python container of `make validate`, `make documents` and the self-tests.
+- `scripts/check-versions.sh` also fails when an adapter's `go.mod` requires another version than its Dockerfile builds, when `go.sum` and `module_sum` disagree, when a base image digest of `own/go-ethernetip/Dockerfile` is not in `versions.yaml`, and when a tool image of the Makefiles or `scripts/lib.sh` is not pinned by digest or not recorded in `versions.yaml`, or the govulncheck version differs. Eight cases in `scripts/test_check_versions.py`.
+
+### Fixed
+
+- `scripts/interop.sh` checks the documents against `schemas/` before it writes results.json, as the scenario `harness.documents`, so a document that does not match is a `fail` in results.json and not only in the exit status; results.json is checked after it is written (`check_documents_and_close` in `scripts/lib.sh`, three cases in `scripts/test_write_results.py`).
+
+### Docs
+
+- `REQUIREMENTS.md` R2.1 lists the thirteen implementations; `SECURITY.md` lists them for upstream reports, names v0.8.x as the supported line and says how each kind of source is verified; README, CONTRIBUTING (the release workflow, moving a Go pin, the tool images) and `own/go-ethernetip/README.md` name the new targets.
+
+The reference images are unchanged in content (same pins); they are rebuilt and published as `v0.9.0`.
+
+---
+
 ## v0.8.2
 
 **Date:** 2026-11-13

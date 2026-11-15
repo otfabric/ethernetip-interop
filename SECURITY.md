@@ -8,13 +8,14 @@ If you discover a security vulnerability in `ethernetip-interop`, please report 
 
 Instead, please email **security@otfabric.io**, or open a private advisory on GitHub (the [Security](https://github.com/otfabric/ethernetip-interop/security) tab → **Advisories** → **Report a vulnerability**), with a description, steps to reproduce and the affected image tag or digest.
 
-Vulnerabilities in the bundled implementations themselves (OpENer, EIPScanner, cpppo, pycomm3) belong upstream; report them there, and tell us so that the pin can be moved.
+Vulnerabilities in the bundled implementations themselves (OpENer, EIPScanner, cpppo, pycomm3, libplctag, gologix, pylogix, etherip, EEIP.NET, cB-Sigma enip, rseip (eip-rs), node-ethernet-ip and go-ethernet-ip (loki-os); [versions.yaml](versions.yaml) names the repository of each) belong upstream; report them there, and tell us so that the pin can be moved.
 
 ## Supported Versions
 
 | Version | Supported |
 |---------|-----------|
-| v0.1.x (latest) | Yes |
+| v0.8.x (latest) | Yes |
+| < v0.8 | No |
 
 ## Security Considerations
 
@@ -42,6 +43,13 @@ given. That is their purpose.
 
 ### Supply chain
 
-- Upstream sources are fetched during the image build at pinned versions: OpENer and EIPScanner as GitHub archives of a commit, verified against their SHA-256; cpppo, greenery and pycomm3 from PyPI with hash-pinned `requirements.txt` (`pip --require-hashes`)
-- Base images are pinned by digest. CI and the release workflow pull them from `mirror.gcr.io/library`, a mirror of Docker Hub's official images, because anonymous Docker Hub pulls are rate limited; the digest makes the source irrelevant to the content (`BASE_REGISTRY`, default `docker.io/library`). The build tooling images (BuildKit, QEMU handlers, shellcheck, Python) come from the same mirror by tag (`TOOLS_REGISTRY`)
+- Upstream sources are fetched during the image build at pinned versions, each verified by the kind of its source ([versions.yaml](versions.yaml) records the hash):
+  - OpENer, EIPScanner, libplctag, etherip, EEIP.NET and rseip (eip-rs): the GitHub archive of a commit, verified against its SHA-256 (`source_sha256`). etherip is built with Maven, whose build plugins come from Maven Central at the versions Maven 3.9.16 and etherip's pom name
+  - cpppo, greenery, pycomm3 and pylogix: PyPI, with hash-pinned `requirements.txt` (`pip --require-hashes`; `wheel_sha256`)
+  - gologix, cB-Sigma enip and go-ethernet-ip (loki-os): the Go module proxy, verified against the adapter's `go.sum` (`module_sum`)
+  - node-ethernet-ip: npm, with `npm ci` against `package-lock.json`, which carries each tarball's integrity hash (`npm_integrity`)
+  - the crates rseip depends on: crates.io, verified against the checksums of `adapters/eiprs/Cargo.lock`
+- `scripts/check-versions.sh` (CI and the release workflow) fails when `versions.yaml` disagrees with the Dockerfiles, the `requirements.txt` files, the `go.mod` and `go.sum` files or the tool images
+- Base images are pinned by digest. CI and the release workflow pull them from `mirror.gcr.io/library`, a mirror of Docker Hub's official images, because anonymous Docker Hub pulls are rate limited; the digest makes the source irrelevant to the content (`BASE_REGISTRY`, default `docker.io/library`). The tooling images (BuildKit, QEMU handlers, shellcheck, Python) come from the same mirror (`TOOLS_REGISTRY`), pinned by version and digest (`versions.yaml` `tooling`); the Python packages of the validators are hash-pinned in `scripts/requirements.txt`, and govulncheck is pinned by version
+- CI runs gofmt, `go vet`, the race tests and govulncheck on the Go adapters and on the adapter of OT Fabric's own stack, in the golang image the adapters are built with (`make test-go vulncheck`, and the same targets of `own/go-ethernetip/Makefile`)
 - Consumers should pin the published images by digest, taken from the release notes or `manifest.json` of a release

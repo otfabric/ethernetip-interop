@@ -15,6 +15,10 @@ NETWORK="ethernetip-interop-${RUN_ID}"
 READY_FILE="/run/ethernetip-interop/ready"
 WAIT_TIMEOUT="${WAIT_TIMEOUT:-60}"
 TOOLS_REGISTRY="${TOOLS_REGISTRY:-docker.io}"
+# The Python of the validators when jsonschema is not installed: the
+# Makefile's PYTHON_IMAGE (versions.yaml tooling; scripts/check-versions.sh
+# checks both).
+PYTHON_IMAGE="${PYTHON_IMAGE:-${TOOLS_REGISTRY}/library/python:3.12.16-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b}"
 
 PASS=0
 FAIL=0
@@ -100,7 +104,8 @@ run_client() {
 capabilities() { docker run --rm "$(image_of "$1")" print-capabilities 2>/dev/null; }
 
 # validate_documents <dir>: schemas/ against the documents in dir, with the
-# local jsonschema package or, without one, in a Python container.
+# local jsonschema package or, without one, in a Python container with the
+# hash-pinned packages of scripts/requirements.txt.
 validate_documents() {
     local dir="$1" root
     root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -110,9 +115,29 @@ validate_documents() {
         local abs
         abs="$(cd "${dir}" && pwd)"
         "${root}/scripts/retry.sh" docker run --rm -v "${root}:/work:ro" -v "${abs}:/docs:ro" -w /work \
-            "${TOOLS_REGISTRY}/library/python:3.12-slim" \
-            sh -c 'pip install -q --root-user-action=ignore --disable-pip-version-check jsonschema && python scripts/validate-documents.py /docs'
+            "${PYTHON_IMAGE}" \
+            sh -c 'pip install -q --root-user-action=ignore --disable-pip-version-check --require-hashes --only-binary=:all: -r scripts/requirements.txt && python scripts/validate-documents.py /docs'
     fi
+}
+
+# check_documents_and_close <dir>: the end of a self-test that kept its
+# documents in dir. The documents are checked against schemas/ as a scenario
+# of the run (harness.documents), so that results.json records a failure;
+# then results.json is written and judged. results.json is then checked
+# against its schema in turn, which it cannot record (write-results.py checks
+# it too when jsonschema is installed): a failure there fails the run.
+check_documents_and_close() {
+    local dir="$1"
+    RESULT_FEATURE=""
+    at harness.documents
+    if validate_documents "${dir}" >"${dir}/schema-check.txt" 2>&1; then ok "documents match schemas/"
+    else fail "documents do not match schemas/: $(cat "${dir}/schema-check.txt")"; fi
+    results_close || FAIL=$((FAIL + 1))
+    if ! validate_documents "${dir}" >"${dir}/schema-check.txt" 2>&1; then
+        FAIL=$((FAIL + 1))
+        log "FAIL: results.json does not match schemas/: $(cat "${dir}/schema-check.txt")"
+    fi
+    return 0
 }
 
 finish() {
